@@ -26,7 +26,11 @@ def main() -> None:
     guard = UrlGuard(
         host_allowlist=settings.host_allowlist, allowed_ports=settings.allowed_ports, remote_check=remote_check
     )
-    logging.getLogger(__name__).info("egress proxy=%s", "on" if remote_check else "off (local DNS check)")
+    logging.getLogger(__name__).info(
+        "egress proxy=%s chromium sandbox=%s",
+        "on" if remote_check else "off (local DNS check)",
+        "on" if settings.chromium_sandbox else "OFF",
+    )
     handler = Investigator(api, Collector(settings, guard))
 
     consumer_cfg = ConsumerConfig()

@@ -46,4 +46,5 @@ Worker는 `egress` 네트워크에도 붙지 않는다. 인터넷 DNS·직접 �
 | ~~Playwright route는 HTTP 리다이렉트의 다음 단계를 가로채지 못함~~ | 하위 자원 리다이렉트가 내부 주소로 향하면 요청이 나갈 수 있었음 | ✅ 해결: 송신 프록시가 연결 시점에 차단. 기록은 `network_summary.subresource_redirects` |
 | ~~DNS 조회와 연결 사이의 주소 변경(리바인딩)~~ | 검사 통과 후 내부 주소로 연결될 수 있었음 | ✅ 해결: 프록시가 한 번 조회해 검사한 IP로 직접 연결 |
 | HTTP 요청은 프록시가 연결마다 1건만 전달 | 브라우저가 연결을 새로 열어 약간 느려짐(모든 요청이 다시 검사되는 대가) | 성능 문제 시 연결 재사용 중 호스트 변경을 검사하는 방식 검토 |
-| 컨테이너 안에서 Chromium 샌드박스 꺼짐 | 렌더러 취약점 악용 시 컨테이너 권한까지 도달 (비root, cap_drop ALL, 읽기 전용, 네트워크 분리로 완화) | 3주차: seccomp 프로필 적용 후 `CHROMIUM_SANDBOX=true` |
+| ~~컨테이너 안에서 Chromium 샌드박스 꺼짐~~ | 렌더러 취약점 악용 시 컨테이너 권한까지 도달할 수 있었음 | ✅ 해결: Docker 기본 seccomp + clone·unshare·setns·chroot만 추가 허용한 프로필로 샌드박스 켬. 렌더러가 별도 user·pid·net 네임스페이스에서 실행됨을 확인 |
+| CI 러너에서는 Chromium 샌드박스 꺼짐 | GitHub Ubuntu 24.04 러너의 AppArmor가 비특권 user namespace를 막음. 대상은 러너 안 로컬 시험 서버뿐 | 운영·시연 환경(compose)은 켠 상태 유지, `test_sandbox_config.py`로 설정 회귀 검사 |

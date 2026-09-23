@@ -99,13 +99,15 @@ services:
       URL_HOST_ALLOWLIST: '["testsites"]'
       # 모든 브라우저 요청과 목적지 검사를 송신 프록시로 보낸다.
       EGRESS_PROXY_URL: http://egress-proxy:3128
-      # TODO(3주차): Chromium용 seccomp 프로필을 적용하고 true로 바꾼다.
-      CHROMIUM_SANDBOX: "false"
+      # Chromium 자체 샌드박스를 켠다(아래 seccomp 프로필 필요).
+      CHROMIUM_SANDBOX: "true"
     read_only: true
     tmpfs: ["/tmp", "/home/pwuser"]
     shm_size: 1gb
     init: true
-    # TODO(3주차): Chromium 샌드박스용 seccomp 프로필 적용
+    # Docker 기본 seccomp 프로필 + Chromium 네임스페이스 샌드박스에 필요한 clone·unshare·setns·chroot 허용.
+    # 권한(cap)은 모두 뺀 상태를 유지한다. 생성 방법은 worker/seccomp/generate.py 참고.
+    security_opt: ["no-new-privileges:true", "seccomp=./worker/seccomp/chromium.json"]
     depends_on:
       redis: { condition: service_healthy }
       backend: { condition: service_started }
