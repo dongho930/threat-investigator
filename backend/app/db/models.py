@@ -43,6 +43,7 @@ class CaseStatus(enum.StrEnum):
     INVESTIGATING = "investigating"
     JUDGING = "judging"
     REVIEW = "review"
+    CONFIRMED = "confirmed"  # 검토자가 의심으로 확정(제보 대기)
     REPORTED = "reported"
     HELD = "held"
     REJECTED = "rejected"
@@ -101,10 +102,39 @@ class User(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     username: Mapped[str] = mapped_column(String(64), unique=True)
-    password_hash: Mapped[str] = mapped_column(String(255))  # Argon2id (4주차)
+    password_hash: Mapped[str] = mapped_column(String(255))  # Argon2id (app.security.passwords)
     role: Mapped[UserRole] = mapped_column(_enum(UserRole, "user_role"))
     is_active: Mapped[bool] = mapped_column(default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+class UserSession(Base):
+    """콘솔 로그인 세션. 쿠키에는 임의 토큰만 두고, DB에는 그 SHA-256만 저장한다(DB가 유출돼도 세션 도용 불가)."""
+
+    __tablename__ = "sessions"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"), index=True)
+    token_sha256: Mapped[str] = mapped_column(String(64), unique=True)
+    # 세션마다 다른 CSRF 토큰. 상태 변경 요청의 X-CSRF-Token 헤더와 대조한다.
+    csrf_token: Mapped[str] = mapped_column(String(64))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    # 절대 만료 시각. 활동이 있어도 이 시각이 지나면 다시 로그인해야 한다.
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    user: Mapped[User] = relationship(lazy="joined")
+
+
+class LoginAttempt(Base):
+    """로그인 시도 기록(시도 제한용). 비밀번호는 어떤 형태로도 남기지 않는다."""
+
+    __tablename__ = "login_attempts"
+
+    id: Mapped[int] = mapped_column(BigInteger().with_variant(Integer, "sqlite"), primary_key=True, autoincrement=True)
+    username: Mapped[str] = mapped_column(String(64), index=True)
+    success: Mapped[bool] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
 
 class Case(Base):
@@ -128,12 +158,20 @@ class Case(Base):
     # 발행한 조사 작업 수(최초 1). 상한을 넘으면 retry_exhausted로 실패 처리한다.
     attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
+    # 담당 조사자. 조사자는 자기가 등록했거나 배정받은 사건만 볼 수 있다(IDOR 방지, app.security.rbac).
+    assignee_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"), index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     evidence: Mapped[list["Evidence"]] = relationship(back_populates="case")
     verdicts: Mapped[list["Verdict"]] = relationship(back_populates="case")
     reports: Mapped[list["Report"]] = relationship(back_populates="case")
+    # joined(LEFT OUTER JOIN)로 읽으면 사건 행 잠금(SELECT ... FOR UPDATE)을 PostgreSQL이 거부한다. 별도 쿼리로 읽는다.
+    assignee: Mapped[User | None] = relationship(foreign_keys=[assignee_id], lazy="selectin")
+
+    @property
+    def assignee_username(self) -> str | None:
+        return self.assignee.username if self.assignee is not None else None
 
 
 class Report(Base):
@@ -195,6 +233,11 @@ class Verdict(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     case: Mapped[Case] = relationship(back_populates="verdicts")
+    reviewer: Mapped[User | None] = relationship(lazy="selectin")
+
+    @property
+    def reviewer_username(self) -> str | None:
+        return self.reviewer.username if self.reviewer is not None else None
 
 
 class Submission(Base):

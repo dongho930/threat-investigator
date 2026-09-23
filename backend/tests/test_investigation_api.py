@@ -102,7 +102,7 @@ def test_full_flow_stores_hashed_evidence_and_serves_it(client: TestClient) -> N
     assert content.headers["x-content-type-options"] == "nosniff"
 
     with client.app.state.session_factory() as db:
-        actions = [a.action for a in db.scalars(select(AuditLog).order_by(AuditLog.id))]
+        actions = [a.action for a in db.scalars(select(AuditLog).order_by(AuditLog.id)) if a.target_type == "case"]
     assert actions == [
         "case.create",
         "case.investigate.start",

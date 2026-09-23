@@ -25,11 +25,11 @@ PR 리뷰 때 해당 ID를 체크하고, 보안 이슈에는 같은 분류 라�
 
 | ID | 위험 지점 | 대책 | 시험 | 주차 | 상태 |
 |---|---|---|---|---|---|
-| SC-SF-01 | 콘솔 로그인 | Argon2id 해시, 로그인 시도 제한, HttpOnly·Secure·SameSite 쿠키, 세션 만료 | — | 4 | ⬜ |
-| SC-SF-02 | 권한 확인 | RBAC(조사자·검토자·관리자), 모든 API에서 서버 측 확인 | — | 4 | ⬜ |
-| SC-SF-03 | 다른 사건 접근 (IDOR) | 사건 단위 접근 확인 | — | 4 | ⬜ |
+| SC-SF-01 | 콘솔 로그인 | Argon2id 해시(성공 시 매개변수 갱신), 계정별 시도 제한(15분 5회) + nginx IP별 제한(분당 10회), 없는 계정·틀린 비밀번호·비활성 계정 같은 응답(더미 해시로 시간 차 제거), `__Host-` HttpOnly·Secure·SameSite=Strict 쿠키, DB에는 세션 토큰의 SHA-256만 저장, 유휴 30분·절대 8시간 만료, 로그인마다 새 세션, 비활성화·비밀번호 초기화 시 세션 즉시 종료, 계정 관리는 서버 CLI로만 | `backend/tests/test_auth.py` | 4 | ✅ |
+| SC-SF-02 | 권한 확인 | RBAC(조사자·검토자·관리자) 권한표 한 곳(`app/security/rbac.py`), 모든 콘솔 API에 `require(권한)` 의존성, 검토자는 자기가 등록한 사건을 확정할 수 없음(4-eyes), 판정 확정은 새 판정 버전(decided_by=human)으로 쌓음 | `test_rbac.py` (`test_every_console_endpoint_requires_login`, `test_every_console_route_is_covered_by_the_list`, `test_admin_cannot_confirm_own_case`) | 4 | ✅ |
+| SC-SF-03 | 다른 사건 접근 (IDOR) | 조사자는 자기가 등록했거나 배정받은 사건만(목록 쿼리 조건과 단건 확인이 같은 규칙), 사건·증거·판정·신고 하위 경로 모두 `AccessibleCase` 확인, 볼 수 없는 사건은 없는 사건과 같은 404, 남의 사건 URL을 다시 등록하면 존재만 알리고 내용은 비움 | `test_rbac.py` (`test_investigator_cannot_see_other_investigators_case`, `test_duplicate_url_from_other_investigator_hides_case`) | 4 | ✅ |
 | SC-SF-04 | API 키·DB 비밀번호 | 환경변수로만 주입, `.env` 커밋 금지, gitleaks | `.github/workflows/security.yml` | 1 | ✅ |
-| SC-SF-05 | CSRF | 쿠키 인증 도입 시 CSRF 토큰 + SameSite | — | 4 | ⬜ |
+| SC-SF-05 | CSRF | 세션마다 다른 CSRF 토큰을 `X-CSRF-Token` 헤더로 대조(콘솔은 메모리에만 보관), SameSite=Strict, 상태 변경 요청의 `Sec-Fetch-Site`가 cross-site·same-site면 인증 전에 거부(로그인 CSRF 포함) | `test_auth.py` (`test_state_change_without_csrf_token_is_rejected`, `test_csrf_token_of_other_session_is_rejected`, `test_cross_site_requests_are_rejected_before_auth`) | 4 | ✅ |
 | SC-SF-06 | 전송 구간 | 운영 배포 시 TLS 필수, 내부 네트워크 분리 | `compose.yaml` networks | 1·7 | 🟡 |
 | SC-SF-07 | Worker 내부 API | 서비스 토큰(32자 이상, `hmac.compare_digest`), `/internal` 경로는 nginx가 404 처리, Worker·backend만 연결된 `api` 네트워크 | `test_internal_api_requires_worker_token`, `test_internal_routes_not_under_public_api_prefix` | 2 | ✅ |
 | SC-SF-08 | 증거 무결성 | 저장 시 SHA-256·버전 기록, 조회할 때마다 해시 재대조 후 불일치면 내용 대신 409, 감사 로그 | `test_tampered_evidence_is_not_served` | 2 | ✅ |

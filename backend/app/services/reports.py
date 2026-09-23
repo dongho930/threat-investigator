@@ -129,7 +129,9 @@ def _read_rows(text: str, max_rows: int) -> list[dict[str, str]]:
     return rows
 
 
-def import_reports(db: Session, settings: Settings, data: bytes, *, actor: str) -> ImportSummary:
+def import_reports(
+    db: Session, settings: Settings, data: bytes, *, actor: str, created_by: uuid.UUID | None = None
+) -> ImportSummary:
     rows = _read_rows(decode_csv(data), settings.report_import_max_rows)
     summary = ImportSummary(batch_id=uuid.uuid4(), total=len(rows))
     now = datetime.now(UTC)
@@ -159,7 +161,13 @@ def import_reports(db: Session, settings: Settings, data: bytes, *, actor: str) 
             continue
         try:
             case, merged = create_case(
-                db, settings, url=row.get("url", ""), note=None, actor=actor, source=CaseSource.REPORT
+                db,
+                settings,
+                url=row.get("url", ""),
+                note=None,
+                actor=actor,
+                source=CaseSource.REPORT,
+                created_by=created_by,
             )
         except UrlPolicyError as exc:
             summary.reject(line, exc.code)

@@ -1,18 +1,25 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 
 import {
   ApiError,
+  assignCase,
+  can,
   getEvidenceJson,
+  listInvestigators,
   listEvidence,
   listReports,
   listVerdicts,
+  reviewCase,
   screenshotUrl,
   type CaseItem,
+  type Decision,
   type DomSummary,
   type EvidenceItem,
+  type Me,
   type NetworkSummary,
   type RedirectHop,
   type ReportItem,
+  type UserBrief,
   type VerdictItem,
 } from './api'
 
@@ -80,8 +87,158 @@ const POLICY_LABEL: Record<string, string> = {
   insufficient_evidence: '수집 실패·증거 부족 (안전으로 보지 않음)',
 }
 
+const DECISION_LABEL: Record<Decision, string> = {
+  SUSPICIOUS: '의심 확정 (제보 대기)',
+  BENIGN: '정상 — 제외',
+  UNKNOWN: '보류',
+}
+
+function verdictBadge(status: Decision): string {
+  return status === 'SUSPICIOUS' ? 'badge-failed' : status === 'UNKNOWN' ? 'badge-review' : ''
+}
+
+function HumanVerdictView({ verdict }: { verdict: VerdictItem }) {
+  return (
+    <div className="detail-block">
+      <h3>
+        검토자 판정 v{verdict.version}{' '}
+        <span className={`badge ${verdictBadge(verdict.status)}`}>{DECISION_LABEL[verdict.status]}</span>
+      </h3>
+      <p className="muted">
+        {verdict.reviewer ?? '(알 수 없음)'} · {new Date(verdict.created_at).toLocaleString('ko-KR')}
+        {verdict.suspected_types.length > 0 &&
+          ` · 의심 유형: ${verdict.suspected_types.map((t) => TYPE_LABEL[t] ?? t).join(', ')}`}
+      </p>
+      <p>사유: {verdict.policy_reason}</p>
+    </div>
+  )
+}
+
+const REVIEW_TYPES = ['PHISHING', 'SCAM', 'ILLEGAL_GAMBLING_SUSPECTED', 'MALWARE', 'OTHER']
+
+function ReviewPanel({ item, suggested, onDone }: { item: CaseItem; suggested: string[]; onDone: () => void }) {
+  const [decision, setDecision] = useState<Decision>('SUSPICIOUS')
+  const [types, setTypes] = useState<string[]>(suggested)
+  const [reason, setReason] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [busy, setBusy] = useState(false)
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setBusy(true)
+    setError(null)
+    try {
+      await reviewCase(item.id, decision, decision === 'SUSPICIOUS' ? types : [], reason)
+      setReason('')
+      onDone()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '판정을 저장하지 못했습니다.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function toggle(t: string) {
+    setTypes((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))
+  }
+
+  return (
+    <div className="detail-block">
+      <h3>판정 확정 (검토자)</h3>
+      <form onSubmit={onSubmit} className="form">
+        <fieldset className="choices">
+          <legend>결론</legend>
+          {(Object.keys(DECISION_LABEL) as Decision[]).map((d) => (
+            <label key={d}>
+              <input type="radio" name="decision" checked={decision === d} onChange={() => setDecision(d)} />{' '}
+              {DECISION_LABEL[d]}
+            </label>
+          ))}
+        </fieldset>
+        {decision === 'SUSPICIOUS' && (
+          <fieldset className="choices">
+            <legend>의심 유형</legend>
+            {REVIEW_TYPES.map((t) => (
+              <label key={t}>
+                <input type="checkbox" checked={types.includes(t)} onChange={() => toggle(t)} /> {TYPE_LABEL[t]}
+              </label>
+            ))}
+          </fieldset>
+        )}
+        <label htmlFor="review-reason">사유 (필수, 500자 이내)</label>
+        <input
+          id="review-reason"
+          required
+          maxLength={500}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          autoComplete="off"
+        />
+        <button type="submit" disabled={busy || (decision === 'SUSPICIOUS' && types.length === 0)}>
+          {busy ? '저장 중…' : '판정 확정'}
+        </button>
+      </form>
+      {error && (
+        <p role="alert" className="error">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
+
+function AssignPanel({ item, onDone }: { item: CaseItem; onDone: () => void }) {
+  const [users, setUsers] = useState<UserBrief[]>([])
+  const [selected, setSelected] = useState('')
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    listInvestigators()
+      .then((r) => setUsers(r.items))
+      .catch(() => setError('조사자 목록을 불러오지 못했습니다.'))
+  }, [])
+
+  async function onSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault()
+    if (!selected) return
+    setError(null)
+    try {
+      await assignCase(item.id, selected)
+      onDone()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : '배정하지 못했습니다.')
+    }
+  }
+
+  return (
+    <div className="detail-block">
+      <h3>담당 조사자 배정</h3>
+      <form onSubmit={onSubmit} className="form">
+        <label htmlFor="assignee">담당 (현재: {item.assignee ?? '없음'})</label>
+        <select id="assignee" value={selected} onChange={(e) => setSelected(e.target.value)}>
+          <option value="">선택</option>
+          {users.map((u) => (
+            <option key={u.id} value={u.id}>
+              {u.username}
+            </option>
+          ))}
+        </select>
+        <button type="submit" disabled={!selected}>
+          배정
+        </button>
+      </form>
+      {error && (
+        <p role="alert" className="error">
+          {error}
+        </p>
+      )}
+    </div>
+  )
+}
+
 function VerdictView({ verdict }: { verdict: VerdictItem }) {
-  const badge = verdict.status === 'SUSPICIOUS' ? 'badge-failed' : verdict.status === 'UNKNOWN' ? 'badge-review' : ''
+  const badge = verdictBadge(verdict.status)
+  const signals = verdict.rule_result.signals ?? []
   return (
     <div className="detail-block">
       <h3>
@@ -93,7 +250,7 @@ function VerdictView({ verdict }: { verdict: VerdictItem }) {
           ` · 의심 유형: ${verdict.suspected_types.map((t) => TYPE_LABEL[t] ?? t).join(', ')}`}
         {' '}— 기술적 평가이며 최종 결론은 담당자가 내립니다.
       </p>
-      {verdict.rule_result.signals.length > 0 && (
+      {signals.length > 0 && (
         <table>
           <thead>
             <tr>
@@ -103,7 +260,7 @@ function VerdictView({ verdict }: { verdict: VerdictItem }) {
             </tr>
           </thead>
           <tbody>
-            {verdict.rule_result.signals.map((s) => (
+            {signals.map((s) => (
               <tr key={s.code}>
                 <td className="nowrap">{TYPE_LABEL[s.type] ?? s.type}</td>
                 <td>{s.detail}</td>
@@ -117,7 +274,9 @@ function VerdictView({ verdict }: { verdict: VerdictItem }) {
   )
 }
 
-export default function CaseDetail({ item }: { item: CaseItem }) {
+const REVIEWABLE = new Set<CaseItem['status']>(['review', 'held'])
+
+export default function CaseDetail({ item, me, onChanged }: { item: CaseItem; me: Me; onChanged: () => void }) {
   // 어느 사건의 데이터인지 함께 보관해, 사건을 바꾼 직후 이전 사건의 증거 ID로 요청하지 않게 한다.
   const [data, setData] = useState<(Loaded & { caseId: string }) | null>(null)
   const [failedShotId, setFailedShotId] = useState<string | null>(null)
@@ -146,10 +305,13 @@ export default function CaseDetail({ item }: { item: CaseItem }) {
     return () => {
       cancelled = true
     }
-  }, [item.id, item.status])
+  }, [item.id, item.status, item.assignee])
 
   const current = data?.caseId === item.id ? data : null
   const shot = current ? latest(current.evidence, 'screenshot') : undefined
+  // 판정 이력은 최신 버전이 먼저 온다. 시스템 판정과 검토자 판정을 따로 보여 준다.
+  const systemVerdict = current?.verdicts.find((v) => v.decided_by === 'system')
+  const humanVerdict = current?.verdicts.find((v) => v.decided_by === 'human')
 
   return (
     <section className="card">
@@ -164,7 +326,12 @@ export default function CaseDetail({ item }: { item: CaseItem }) {
           {e}
         </p>
       ))}
-      {current?.verdicts[0] && <VerdictView verdict={current.verdicts[0]} />}
+      {humanVerdict && <HumanVerdictView verdict={humanVerdict} />}
+      {systemVerdict && <VerdictView verdict={systemVerdict} />}
+      {current && can(me, 'case:review') && REVIEWABLE.has(item.status) && (
+        <ReviewPanel key={item.id} item={item} suggested={systemVerdict?.suspected_types ?? []} onDone={onChanged} />
+      )}
+      {can(me, 'case:assign') && <AssignPanel item={item} onDone={onChanged} />}
       {current && current.reports.length > 0 && (
         <div className="detail-block">
           <h3>접수된 신고 {current.reports.length}건</h3>

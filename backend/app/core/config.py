@@ -41,6 +41,12 @@ class Settings(BaseSettings):
     feed_max_new_cases_per_day: int = 100
     feed_batch_max_items: int = 500
 
+    # 콘솔 로그인 세션: 유휴 만료·절대 만료, 로그인 시도 제한(계정별)
+    session_idle_minutes: int = Field(default=30, ge=1, le=24 * 60)
+    session_absolute_hours: int = Field(default=8, ge=1, le=24 * 7)
+    login_max_failures: int = Field(default=5, ge=1, le=100)
+    login_lockout_minutes: int = Field(default=15, ge=1, le=24 * 60)
+
     # 조사 작업 임대·재발행(스위퍼)
     investigation_lease_seconds: int = 600
     queued_stale_seconds: int = 600
