@@ -45,6 +45,21 @@ class CompleteRequest(BaseModel):
     reason: FailureReason | None = None
 
 
+class FeedImportRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    source: str = Field(pattern=r"^[a-z0-9][a-z0-9._-]{0,63}$")
+    urls: list[str] = Field(max_length=500)
+
+
+class FeedImportResponse(BaseModel):
+    received: int
+    created: int
+    duplicate: int
+    rejected: int
+    capped: int
+
+
 class CompleteResult(BaseModel):
     case_id: uuid.UUID
     status: CaseStatus

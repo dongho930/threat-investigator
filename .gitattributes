@@ -1,3 +1,5 @@
 # 컨테이너(Linux)에서 쓰는 파일이 많으므로 줄바꿈을 LF로 고정한다.
 * text=auto eol=lf
 *.png binary
+# 체크섬으로 검증하는 모의 피드 파일은 줄바꿈 변환을 하지 않는다.
+testsites/html/feed/* -text

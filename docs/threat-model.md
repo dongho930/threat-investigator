@@ -32,7 +32,7 @@
 | data | backend, outbox-relay, migrate, db | 불가 (internal) |
 | jobs | backend, outbox-relay, worker, redis | 불가 (internal) |
 | api | backend, worker | 불가 (internal). Worker → `/internal/v1` 전용, 서비스 토큰 인증 |
-| sandbox | worker, egress-proxy | 불가 (internal). Worker가 밖으로 나가는 유일한 길 |
+| sandbox | worker, feed-collector, egress-proxy | 불가 (internal). Worker·피드 수집기가 밖으로 나가는 유일한 길 |
 | egress | egress-proxy, testsites | 가능. 프록시가 연결마다 목적지 IP를 검사(사설·예약·메타데이터 주소 차단) |
 
 Worker는 `data` 네트워크에 연결되지 않으므로 DB에 직접 접근할 수 없다. 증거 파일 볼륨(`evidence`)도 backend에만 연결된다.

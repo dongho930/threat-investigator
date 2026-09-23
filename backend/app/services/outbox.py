@@ -24,7 +24,16 @@ class StreamClient(Protocol):
     def xadd(self, name: str, fields: dict[str, str], maxlen: int | None = ..., approximate: bool = ...) -> object: ...
 
 
-def publish_pending(db: Session, client: StreamClient, *, stream: str, batch_size: int = 50) -> int:
+def publish_pending(
+    db: Session,
+    client: StreamClient,
+    *,
+    stream: str,
+    topic_streams: dict[str, str] | None = None,
+    batch_size: int = 50,
+) -> int:
+    """발행 대기 이벤트를 Redis Streams로 보낸다. topic_streams에 있는 토픽은 그 스트림으로, 나머지는 stream으로."""
+    routes = topic_streams or {}
     events = db.scalars(
         select(OutboxEvent)
         .where(OutboxEvent.published_at.is_(None))
@@ -34,7 +43,7 @@ def publish_pending(db: Session, client: StreamClient, *, stream: str, batch_siz
     ).all()
     for event in events:
         message = {"outbox_id": str(event.id), "topic": event.topic, "payload": json.dumps(event.payload)}
-        client.xadd(stream, message, maxlen=100_000, approximate=True)
+        client.xadd(routes.get(event.topic, stream), message, maxlen=100_000, approximate=True)
         event.published_at = datetime.now(UTC)
     db.commit()
     return len(events)
@@ -45,6 +54,7 @@ def run_forever(
     client: StreamClient,
     *,
     stream: str,
+    topic_streams: dict[str, str] | None = None,
     sweep: Callable[[Session], object] | None = None,
     sweep_interval_s: float = 30.0,
 ) -> None:
@@ -56,7 +66,7 @@ def run_forever(
                 with session_factory() as db:
                     sweep(db)
             with session_factory() as db:
-                published = publish_pending(db, client, stream=stream)
+                published = publish_pending(db, client, stream=stream, topic_streams=topic_streams)
             if published:
                 logger.info("outbox published=%d", published)
                 continue
@@ -71,6 +81,7 @@ if __name__ == "__main__":
     from app.core.config import get_settings
     from app.core.logging import configure_logging
     from app.db.session import get_sessionmaker
+    from app.services.cases import FEED_TOPIC
     from app.services.sweeper import sweep as sweep_cases
 
     configure_logging()
@@ -79,6 +90,7 @@ if __name__ == "__main__":
         get_sessionmaker(),
         redis.Redis.from_url(settings.redis_url),
         stream=settings.job_stream,
+        topic_streams={FEED_TOPIC: settings.feed_job_stream},
         sweep=lambda db: sweep_cases(db, settings),
         sweep_interval_s=settings.sweep_interval_seconds,
     )
