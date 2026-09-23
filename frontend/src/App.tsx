@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react'
 
 import { ApiError, createCase, listCases, type CaseItem, type CaseStatus } from './api'
+import CaseDetail from './CaseDetail'
 
 const STATUS_LABEL: Record<CaseStatus, string> = {
   queued: '대기',
@@ -24,6 +25,8 @@ export default function App() {
   const [note, setNote] = useState('')
   const [message, setMessage] = useState<{ kind: 'ok' | 'error'; text: string } | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const selected = cases.find((c) => c.id === selectedId) ?? null
 
   const refresh = useCallback(async () => {
     try {
@@ -129,7 +132,16 @@ export default function App() {
               </tr>
             )}
             {cases.map((c) => (
-              <tr key={c.id}>
+              <tr
+                key={c.id}
+                className={c.id === selectedId ? 'selected clickable' : 'clickable'}
+                onClick={() => setSelectedId(c.id)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') setSelectedId(c.id)
+                }}
+                tabIndex={0}
+                aria-selected={c.id === selectedId}
+              >
                 <td>
                   <span className={`badge badge-${c.status}`}>{STATUS_LABEL[c.status]}</span>
                 </td>
@@ -142,6 +154,8 @@ export default function App() {
           </tbody>
         </table>
       </section>
+
+      {selected && <CaseDetail item={selected} />}
     </main>
   )
 }

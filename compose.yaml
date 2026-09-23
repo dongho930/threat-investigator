@@ -5,6 +5,7 @@
 #   web    : frontend ↔ backend           (internal)
 #   data   : backend·relay ↔ PostgreSQL   (internal)  ← Worker는 DB에 접근할 수 없다
 #   jobs   : backend·relay·worker ↔ Redis (internal)
+#   api    : worker → backend 내부 API(/internal, 서비스 토큰) (internal)
 #   egress : worker ↔ 조사 대상(testsites, 인터넷). 3주차에 송신 방화벽·사설 IP 차단을 추가한다.
 
 x-hardening: &hardening
@@ -62,13 +63,18 @@ services:
   backend:
     build: ./backend
     <<: *hardening
-    environment: *backend-env
+    environment:
+      <<: *backend-env
+      WORKER_API_TOKEN: ${WORKER_API_TOKEN:?set WORKER_API_TOKEN in .env}
+      EVIDENCE_DIR: /data/evidence
     read_only: true
     tmpfs: ["/tmp"]
+    # 증거 파일은 backend만 쓴다. Worker는 이 볼륨에 접근하지 않고 API로만 업로드한다.
+    volumes: ["evidence:/data/evidence"]
     depends_on:
       migrate: { condition: service_completed_successfully }
       redis: { condition: service_healthy }
-    networks: [web, data, jobs]
+    networks: [web, data, jobs, api]
 
   outbox-relay:
     build: ./backend
@@ -87,6 +93,11 @@ services:
     <<: *hardening
     environment:
       REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      API_BASE_URL: http://backend:8000
+      WORKER_API_TOKEN: ${WORKER_API_TOKEN:?set WORKER_API_TOKEN in .env}
+      URL_HOST_ALLOWLIST: '["testsites"]'
+      # TODO(3주차): Chromium용 seccomp 프로필을 적용하고 true로 바꾼다.
+      CHROMIUM_SANDBOX: "false"
     read_only: true
     tmpfs: ["/tmp", "/home/pwuser"]
     shm_size: 1gb
@@ -94,7 +105,8 @@ services:
     # TODO(3주차): Chromium 샌드박스용 seccomp 프로필 적용, 송신 방화벽(사설·예약 IP 차단) 추가
     depends_on:
       redis: { condition: service_healthy }
-    networks: [jobs, egress]
+      backend: { condition: service_started }
+    networks: [jobs, api, egress]
 
   frontend:
     build: ./frontend
@@ -121,8 +133,10 @@ networks:
   web: { internal: true }
   data: { internal: true }
   jobs: { internal: true }
+  api: { internal: true }
   egress: {}
 
 volumes:
   pgdata: {}
   redisdata: {}
+  evidence: {}

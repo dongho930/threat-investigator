@@ -1,0 +1,57 @@
+"""Worker 전용 내부 API.
+
+- /internal 경로는 nginx가 프록시하지 않으므로 콘솔(공개 네트워크)에서는 닿지 않는다.
+  Worker와 backend만 연결된 `api` 네트워크에서만 호출된다.
+- 서비스 토큰(Bearer)으로 인증한다. 사람 사용자의 인증·RBAC(4주차)와는 별개다.
+"""
+
+import uuid
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Header, status
+
+from app.api.deps import DbDep, SettingsDep, StoreDep, read_limited_body, require_worker
+from app.db.models import EvidenceKind
+from app.schemas.evidence import ClaimResult, CompleteRequest, CompleteResult, EvidenceOut
+from app.services import investigation
+
+router = APIRouter(prefix="/internal/v1/cases", tags=["internal"], dependencies=[Depends(require_worker)])
+
+COLLECTOR_VERSION_MAX = 50
+
+
+@router.post("/{case_id}/claim", response_model=ClaimResult)
+def claim(case_id: uuid.UUID, db: DbDep) -> ClaimResult:
+    case = investigation.claim_case(db, case_id)
+    # 조사 대상 URL은 큐 메시지가 아니라 여기서 DB 값으로 돌려준다(메시지 위·변조 대비).
+    return ClaimResult(case_id=case.id, url=case.url_normalized, status=case.status)
+
+
+@router.put("/{case_id}/evidence/{kind}", response_model=EvidenceOut, status_code=status.HTTP_201_CREATED)
+def upload_evidence(
+    case_id: uuid.UUID,
+    kind: EvidenceKind,
+    db: DbDep,
+    settings: SettingsDep,
+    store: StoreDep,
+    body: Annotated[bytes, Depends(read_limited_body)],
+    content_type: Annotated[str, Header()] = "",
+    x_collector_version: Annotated[str, Header(max_length=COLLECTOR_VERSION_MAX, pattern=r"^[\w./ -]+$")] = "unknown",
+) -> EvidenceOut:
+    evidence = investigation.add_evidence(
+        db,
+        store,
+        settings,
+        case_id=case_id,
+        kind=kind,
+        data=body,
+        content_type=content_type,
+        collector_version=x_collector_version,
+    )
+    return EvidenceOut.model_validate(evidence)
+
+
+@router.post("/{case_id}/complete", response_model=CompleteResult)
+def complete(case_id: uuid.UUID, body: CompleteRequest, db: DbDep) -> CompleteResult:
+    case = investigation.complete_case(db, case_id, body.outcome, body.reason)
+    return CompleteResult(case_id=case.id, status=case.status, status_reason=case.status_reason)

@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -21,6 +21,21 @@ class Settings(BaseSettings):
     url_allowed_ports: list[int] = Field(default_factory=lambda: [80, 443, 8080, 8443])
     # 개발용 시험 페이지(testsites 컨테이너) 등 내부 호스트를 예외로 허용할 때만 사용한다.
     url_host_allowlist: list[str] = Field(default_factory=list)
+
+    # Worker 전용 내부 API 인증 토큰. 비어 있으면 내부 API를 쓸 수 없다.
+    worker_api_token: SecretStr | None = None
+
+    # 증거 파일 저장 위치와 크기 제한
+    evidence_dir: str = "/data/evidence"
+    evidence_max_screenshot_bytes: int = 8 * 1024 * 1024
+    evidence_max_json_bytes: int = 1024 * 1024
+    evidence_retention_days: int = 90
+
+    @model_validator(mode="after")
+    def _worker_token_strength(self) -> "Settings":
+        if self.worker_api_token is not None and len(self.worker_api_token.get_secret_value()) < 32:
+            raise ValueError("WORKER_API_TOKEN은 32자 이상이어야 합니다.")
+        return self
 
     @model_validator(mode="after")
     def _no_allowlist_in_production(self) -> "Settings":

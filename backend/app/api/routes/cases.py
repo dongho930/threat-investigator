@@ -1,19 +1,14 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, HTTPException, Query, Response, status
 
-from app.core.config import Settings, get_settings
-from app.db.session import get_db
+from app.api.deps import DbDep, SettingsDep
 from app.schemas.cases import CaseCreate, CaseCreateResult, CaseList, CaseOut
 from app.services import cases as case_service
 
 # TODO(4주차): 모든 라우트에 인증·RBAC 의존성 추가 (조사자: 등록·조회, 검토자: 판정 확정)
 router = APIRouter(prefix="/api/v1/cases", tags=["cases"])
-
-DbDep = Annotated[Session, Depends(get_db)]
-SettingsDep = Annotated[Settings, Depends(get_settings)]
 
 
 @router.post("", response_model=CaseCreateResult, status_code=status.HTTP_201_CREATED)

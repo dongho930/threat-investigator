@@ -14,6 +14,7 @@ export interface CaseItem {
   host: string
   source: 'manual' | 'feed'
   status: CaseStatus
+  status_reason: string | null
   note: string | null
   created_at: string
 }
@@ -60,4 +61,66 @@ export function createCase(url: string, note: string): Promise<CaseCreateResult>
     method: 'POST',
     body: JSON.stringify({ url, note: note.trim() === '' ? null : note }),
   })
+}
+
+export type EvidenceKind = 'screenshot' | 'dom_summary' | 'redirect_chain' | 'network_summary'
+
+export interface EvidenceItem {
+  id: string
+  kind: EvidenceKind
+  version: number
+  sha256: string
+  size_bytes: number
+  collector_version: string
+  collected_at: string
+}
+
+export interface RedirectHop {
+  url: string
+  status: number | null
+  blocked: string | null
+}
+
+export interface FormSummary {
+  action_host: string
+  method: string
+  inputs: { type: string; name: string; placeholder: string }[]
+}
+
+export interface DomSummary {
+  final_url: string
+  title: string
+  text_excerpt: string
+  forms: FormSummary[]
+  password_inputs: number
+  iframes: number
+  links: number
+  meta_refresh: string
+}
+
+export interface NetworkSummary {
+  requests: number
+  blocked: Record<string, number>
+  hosts: Record<string, number>
+  popups_blocked: number
+  navigations: string[]
+  unguarded_redirects: { url: string; violation: string | null }[]
+}
+
+function evidencePath(caseId: string, evidenceId?: string): string {
+  const base = `/api/v1/cases/${encodeURIComponent(caseId)}/evidence`
+  return evidenceId ? `${base}/${encodeURIComponent(evidenceId)}/content` : base
+}
+
+export function listEvidence(caseId: string): Promise<{ items: EvidenceItem[] }> {
+  return request<{ items: EvidenceItem[] }>(evidencePath(caseId))
+}
+
+/** 서버가 SHA-256을 다시 대조한 뒤 돌려준 JSON 증거. 무결성 실패 시 ApiError(integrity_mismatch). */
+export function getEvidenceJson<T>(caseId: string, evidenceId: string): Promise<T> {
+  return request<T>(evidencePath(caseId, evidenceId))
+}
+
+export function screenshotUrl(caseId: string, evidenceId: string): string {
+  return evidencePath(caseId, evidenceId)
 }

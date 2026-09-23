@@ -43,9 +43,15 @@ jobs:
           cache: pip
           cache-dependency-path: worker/requirements-dev.txt
       - run: pip install -r requirements-dev.txt
+      # 수집기 통합 시험(tests/test_collector_browser.py)에 쓰는 Chromium
+      - run: python -m playwright install --with-deps chromium
       - run: ruff check .
       - run: ruff format --check .
+      # Ubuntu 24.04 러너는 AppArmor가 비특권 user namespace를 막아 Chromium 샌드박스를 쓸 수 없다.
+      # 시험 페이지는 러너 안의 로컬 서버뿐이므로 CI에서만 끈다.
       - run: pytest
+        env:
+          CHROMIUM_SANDBOX: "false"
 
   frontend:
     runs-on: ubuntu-latest
