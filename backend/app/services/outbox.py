@@ -1,12 +1,14 @@
 """Outbox relay: DB에 기록된 작업 이벤트를 Redis Streams로 발행한다.
 
 relay가 발행 직후 죽으면 같은 이벤트가 다시 발행될 수 있다(최소 1회 전달).
-따라서 Worker는 job_id / case_id+stage 기준으로 중복 실행을 막아야 한다(3주차).
+같은 job_id가 여러 번 전달돼도 backend가 작업 단위로 멱등 처리한다(app/services/investigation.py).
+relay는 주기적으로 스위퍼(app/services/sweeper.py)도 실행해 멈춘 사건을 다시 발행한다.
 """
 
 import json
 import logging
 import time
+from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Protocol
 
@@ -38,9 +40,21 @@ def publish_pending(db: Session, client: StreamClient, *, stream: str, batch_siz
     return len(events)
 
 
-def run_forever(session_factory: sessionmaker[Session], client: StreamClient, *, stream: str) -> None:
+def run_forever(
+    session_factory: sessionmaker[Session],
+    client: StreamClient,
+    *,
+    stream: str,
+    sweep: Callable[[Session], object] | None = None,
+    sweep_interval_s: float = 30.0,
+) -> None:
+    last_sweep = 0.0
     while True:
         try:
+            if sweep is not None and time.monotonic() - last_sweep >= sweep_interval_s:
+                last_sweep = time.monotonic()
+                with session_factory() as db:
+                    sweep(db)
             with session_factory() as db:
                 published = publish_pending(db, client, stream=stream)
             if published:
@@ -57,7 +71,14 @@ if __name__ == "__main__":
     from app.core.config import get_settings
     from app.core.logging import configure_logging
     from app.db.session import get_sessionmaker
+    from app.services.sweeper import sweep as sweep_cases
 
     configure_logging()
     settings = get_settings()
-    run_forever(get_sessionmaker(), redis.Redis.from_url(settings.redis_url), stream=settings.job_stream)
+    run_forever(
+        get_sessionmaker(),
+        redis.Redis.from_url(settings.redis_url),
+        stream=settings.job_stream,
+        sweep=lambda db: sweep_cases(db, settings),
+        sweep_interval_s=settings.sweep_interval_seconds,
+    )

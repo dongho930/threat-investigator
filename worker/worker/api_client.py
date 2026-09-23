@@ -42,8 +42,12 @@ class ApiClient:
         self.collector_version = collector_version
         self._opener = urllib.request.build_opener(_NoRedirect)
 
-    def _request(self, method: str, path: str, body: bytes | None, content_type: str | None) -> Any:
+    def _request(
+        self, method: str, path: str, body: bytes | None, content_type: str | None, job_id: uuid.UUID | None = None
+    ) -> Any:
         headers = {"Authorization": f"Bearer {self._token}", "Accept": "application/json"}
+        if job_id is not None:
+            headers["X-Job-Id"] = str(job_id)
         if content_type:
             headers["Content-Type"] = content_type
         if self.collector_version:
@@ -60,19 +64,21 @@ class ApiClient:
                 code = "http_error"
             raise ApiError(exc.code, code) from None
 
-    def claim(self, case_id: uuid.UUID) -> Target | None:
-        """조사 대상 URL을 받는다. 이미 끝난 사건이면 None."""
+    def claim(self, case_id: uuid.UUID, job_id: uuid.UUID) -> Target | None:
+        """조사 대상 URL을 받는다. 끝난 사건이거나 더 최신 작업이 있으면(stale_job) None."""
+        body = json.dumps({"job_id": str(job_id)}).encode()
         try:
-            data = self._request("POST", f"/internal/v1/cases/{case_id}/claim", b"", "application/json")
+            data = self._request("POST", f"/internal/v1/cases/{case_id}/claim", body, "application/json")
         except ApiError as exc:
             if exc.status in (404, 409):
                 return None
             raise
         return Target(case_id=uuid.UUID(data["case_id"]), url=str(data["url"]))
 
-    def upload_evidence(self, case_id: uuid.UUID, kind: str, data: bytes, content_type: str) -> dict:
-        return self._request("PUT", f"/internal/v1/cases/{case_id}/evidence/{kind}", data, content_type)
+    def upload_evidence(self, case_id: uuid.UUID, job_id: uuid.UUID, kind: str, data: bytes, content_type: str) -> dict:
+        # 같은 작업의 재업로드는 backend가 기존 증거를 돌려준다(멱등).
+        return self._request("PUT", f"/internal/v1/cases/{case_id}/evidence/{kind}", data, content_type, job_id)
 
-    def complete(self, case_id: uuid.UUID, outcome: str, reason: str | None = None) -> dict:
-        body = json.dumps({"outcome": outcome, "reason": reason}).encode()
+    def complete(self, case_id: uuid.UUID, job_id: uuid.UUID, outcome: str, reason: str | None = None) -> dict:
+        body = json.dumps({"job_id": str(job_id), "outcome": outcome, "reason": reason}).encode()
         return self._request("POST", f"/internal/v1/cases/{case_id}/complete", body, "application/json")

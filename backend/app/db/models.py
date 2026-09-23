@@ -120,6 +120,12 @@ class Case(Base):
     status: Mapped[CaseStatus] = mapped_column(_enum(CaseStatus, "case_status"), default=CaseStatus.QUEUED)
     # 실패·보류 사유 코드 (정해진 코드만 저장한다. 외부 오류 메시지 원문은 저장하지 않는다)
     status_reason: Mapped[str | None] = mapped_column(String(64))
+    # 멱등 처리: 가장 최근에 발행한 조사 작업 ID. 이 작업만 claim·증거 업로드·완료 보고를 할 수 있다.
+    current_job_id: Mapped[uuid.UUID | None] = mapped_column()
+    # claim한 작업의 임대 만료 시각. 지나면 스위퍼가 새 작업으로 다시 발행한다.
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 발행한 조사 작업 수(최초 1). 상한을 넘으면 retry_exhausted로 실패 처리한다.
+    attempts: Mapped[int] = mapped_column(Integer, default=0, server_default="0")
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
@@ -130,12 +136,17 @@ class Case(Base):
 
 class Evidence(Base):
     __tablename__ = "evidence"
-    __table_args__ = (UniqueConstraint("case_id", "kind", "version"),)
+    __table_args__ = (
+        UniqueConstraint("case_id", "kind", "version"),
+        # 같은 작업이 같은 종류의 증거를 두 번 올려도 한 건만 남는다(재전달·재시도 대비).
+        UniqueConstraint("case_id", "kind", "job_id", name="uq_evidence_case_kind_job"),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     case_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cases.id"), index=True)
     kind: Mapped[EvidenceKind] = mapped_column(_enum(EvidenceKind, "evidence_kind"))
     version: Mapped[int] = mapped_column(Integer, default=1)
+    job_id: Mapped[uuid.UUID | None] = mapped_column()
     # 저장소 키는 서버가 생성한 UUID 기반 경로만 사용한다(경로 조작 방지).
     storage_key: Mapped[str] = mapped_column(String(200))
     sha256: Mapped[str] = mapped_column(String(64))

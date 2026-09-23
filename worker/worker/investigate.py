@@ -3,6 +3,8 @@
 - 조사 대상 URL은 큐 메시지가 아니라 API에서 case_id로 다시 받는다(메시지 위·변조 대비).
 - 대상 사이트 때문에 생긴 실패(차단·시간초과·연결 오류)는 사유 코드와 함께 "failed"로 보고하고 재시도하지 않는다.
 - 내부 API 호출 실패는 예외를 그대로 올려 소비자가 재시도하게 한다.
+- 모든 호출에 작업 ID를 붙인다. 재전달된 같은 작업은 이어서 진행하고(증거 중복 없음),
+  더 최신 작업이 발행된 사건이면 claim이 거절되어 건너뛴다.
 """
 
 import logging
@@ -17,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 
 class Api(Protocol):
-    def claim(self, case_id: object) -> Target | None: ...
-    def upload_evidence(self, case_id: object, kind: str, data: bytes, content_type: str) -> dict: ...
-    def complete(self, case_id: object, outcome: str, reason: str | None = None) -> dict: ...
+    def claim(self, case_id: object, job_id: object) -> Target | None: ...
+    def upload_evidence(self, case_id: object, job_id: object, kind: str, data: bytes, content_type: str) -> dict: ...
+    def complete(self, case_id: object, job_id: object, outcome: str, reason: str | None = None) -> dict: ...
 
 
 Collect = Callable[[str], Artifacts]
@@ -31,9 +33,9 @@ class Investigator:
         self.collect = collect
 
     def __call__(self, job: JobMessage) -> None:
-        target = self.api.claim(job.case_id)
+        target = self.api.claim(job.case_id, job.job_id)
         if target is None:
-            logger.info("skip job=%s case=%s (not claimable)", job.job_id, job.case_id)
+            logger.info("skip job=%s case=%s (finished or superseded)", job.job_id, job.case_id)
             return
 
         try:
@@ -41,12 +43,12 @@ class Investigator:
         except Exception:
             # 수집기 자체 오류는 원문 메시지를 API로 보내지 않고 정해진 사유 코드만 보고한다.
             logger.exception("collector crashed case=%s", job.case_id)
-            self.api.complete(job.case_id, "failed", "collector_error")
+            self.api.complete(job.case_id, job.job_id, "failed", "collector_error")
             return
 
         for kind, data, content_type in artifacts.files():
-            self.api.upload_evidence(job.case_id, kind, data, content_type)
-        self.api.complete(job.case_id, artifacts.outcome, artifacts.reason)
+            self.api.upload_evidence(job.case_id, job.job_id, kind, data, content_type)
+        self.api.complete(job.case_id, job.job_id, artifacts.outcome, artifacts.reason)
         logger.info(
             "investigated case=%s outcome=%s reason=%s evidence=%d",
             job.case_id,
