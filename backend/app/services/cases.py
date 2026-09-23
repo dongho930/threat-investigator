@@ -31,6 +31,7 @@ def create_case(db: Session, settings: Settings, *, url: str, note: str | None, 
     if existing is not None:
         return existing, True
 
+    job_id = uuid.uuid4()
     case = Case(
         id=uuid.uuid4(),
         url_original=normalized.original,
@@ -39,6 +40,8 @@ def create_case(db: Session, settings: Settings, *, url: str, note: str | None, 
         host=normalized.host,
         source=CaseSource.MANUAL,
         note=note,
+        current_job_id=job_id,
+        attempts=1,
     )
     db.add(case)
     db.add(
@@ -53,7 +56,7 @@ def create_case(db: Session, settings: Settings, *, url: str, note: str | None, 
     db.add(
         OutboxEvent(
             topic=INVESTIGATE_TOPIC,
-            payload={"job_id": str(uuid.uuid4()), "case_id": str(case.id), "stage": "investigate", "attempt": 1},
+            payload={"job_id": str(job_id), "case_id": str(case.id), "stage": "investigate", "attempt": 1},
         )
     )
     try:

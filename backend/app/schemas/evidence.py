@@ -31,9 +31,16 @@ class ClaimResult(BaseModel):
     status: CaseStatus
 
 
+class ClaimRequest(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    job_id: uuid.UUID
+
+
 class CompleteRequest(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
+    job_id: uuid.UUID
     outcome: Outcome
     reason: FailureReason | None = None
 

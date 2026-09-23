@@ -37,7 +37,7 @@ PR 리뷰 때 해당 ID를 체크하고, 보안 이슈에는 같은 분류 라�
 | ID | 위험 지점 | 대책 | 시험 | 주차 | 상태 |
 |---|---|---|---|---|---|
 | SC-TS-01 | 작업 발행 누락·중복 | Outbox 패턴(사건·이벤트 한 트랜잭션), relay 재발행 허용 | `test_publish_pending_marks_published_once` | 1 | ✅ |
-| SC-TS-02 | 같은 작업 중복 실행 | Worker 멱등 키(case_id+stage) | — | 3 | ⬜ |
+| SC-TS-02 | 같은 작업 중복 실행 | 사건마다 현재 작업 ID만 claim·업로드·완료 가능(이전 작업은 `stale_job`), 증거는 (사건·종류·작업) 유니크로 재업로드 시 기존 것 반환, 완료 재보고는 멱등. 임대 만료·오래된 대기 사건은 스위퍼가 새 작업으로 재발행, 3회 초과 시 `retry_exhausted` 실패 | `backend/tests/test_idempotency.py`, `test_same_job_reupload_is_idempotent`, Docker에서 같은 작업 재전달 → 건너뜀·증거 중복 0 | 3 | ✅ |
 | SC-TS-03 | 동시 등록 경쟁 | `url_sha256` 유니크 제약 + IntegrityError 처리 | `test_duplicate_url_returns_existing` | 1 | ✅ |
 | SC-TS-04 | 중복 제출 | `submissions.idempotency_key` 유니크, 전송 시도 ≠ 접수 확인 | — | 6 | ⬜ |
 

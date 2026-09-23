@@ -31,6 +31,12 @@ class Settings(BaseSettings):
     evidence_max_json_bytes: int = 1024 * 1024
     evidence_retention_days: int = 90
 
+    # 조사 작업 임대·재발행(스위퍼)
+    investigation_lease_seconds: int = 600
+    queued_stale_seconds: int = 600
+    max_investigation_attempts: int = 3
+    sweep_interval_seconds: int = 30
+
     @model_validator(mode="after")
     def _worker_token_strength(self) -> "Settings":
         if self.worker_api_token is not None and len(self.worker_api_token.get_secret_value()) < 32:

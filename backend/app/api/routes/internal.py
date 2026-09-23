@@ -8,11 +8,11 @@
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Header, status
+from fastapi import APIRouter, Depends, Header, Response, status
 
 from app.api.deps import DbDep, SettingsDep, StoreDep, read_limited_body, require_worker
 from app.db.models import EvidenceKind
-from app.schemas.evidence import ClaimResult, CompleteRequest, CompleteResult, EvidenceOut
+from app.schemas.evidence import ClaimRequest, ClaimResult, CompleteRequest, CompleteResult, EvidenceOut
 from app.services import investigation
 
 router = APIRouter(prefix="/internal/v1/cases", tags=["internal"], dependencies=[Depends(require_worker)])
@@ -21,8 +21,8 @@ COLLECTOR_VERSION_MAX = 50
 
 
 @router.post("/{case_id}/claim", response_model=ClaimResult)
-def claim(case_id: uuid.UUID, db: DbDep) -> ClaimResult:
-    case = investigation.claim_case(db, case_id)
+def claim(case_id: uuid.UUID, body: ClaimRequest, db: DbDep, settings: SettingsDep) -> ClaimResult:
+    case = investigation.claim_case(db, case_id, body.job_id, settings)
     # 조사 대상 URL은 큐 메시지가 아니라 여기서 DB 값으로 돌려준다(메시지 위·변조 대비).
     return ClaimResult(case_id=case.id, url=case.url_normalized, status=case.status)
 
@@ -35,23 +35,29 @@ def upload_evidence(
     settings: SettingsDep,
     store: StoreDep,
     body: Annotated[bytes, Depends(read_limited_body)],
+    x_job_id: Annotated[uuid.UUID, Header()],
+    response: Response,
     content_type: Annotated[str, Header()] = "",
     x_collector_version: Annotated[str, Header(max_length=COLLECTOR_VERSION_MAX, pattern=r"^[\w./ -]+$")] = "unknown",
 ) -> EvidenceOut:
-    evidence = investigation.add_evidence(
+    evidence, created = investigation.add_evidence(
         db,
         store,
         settings,
         case_id=case_id,
+        job_id=x_job_id,
         kind=kind,
         data=body,
         content_type=content_type,
         collector_version=x_collector_version,
     )
+    if not created:
+        # 같은 작업의 재업로드: 기존 증거를 돌려준다(새 파일을 만들지 않음).
+        response.status_code = status.HTTP_200_OK
     return EvidenceOut.model_validate(evidence)
 
 
 @router.post("/{case_id}/complete", response_model=CompleteResult)
 def complete(case_id: uuid.UUID, body: CompleteRequest, db: DbDep) -> CompleteResult:
-    case = investigation.complete_case(db, case_id, body.outcome, body.reason)
+    case = investigation.complete_case(db, case_id, body.job_id, body.outcome, body.reason)
     return CompleteResult(case_id=case.id, status=case.status, status_reason=case.status_reason)

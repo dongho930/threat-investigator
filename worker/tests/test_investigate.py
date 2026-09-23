@@ -15,15 +15,19 @@ class FakeApi:
         self.target = target
         self.uploads: list[tuple[str, bytes, str]] = []
         self.completed: list[tuple[str, str | None]] = []
+        self.jobs: list[object] = []
 
-    def claim(self, case_id: object) -> Target | None:
+    def claim(self, case_id: object, job_id: object) -> Target | None:
+        self.jobs.append(job_id)
         return self.target
 
-    def upload_evidence(self, case_id: object, kind: str, data: bytes, content_type: str) -> dict:
+    def upload_evidence(self, case_id: object, job_id: object, kind: str, data: bytes, content_type: str) -> dict:
+        self.jobs.append(job_id)
         self.uploads.append((kind, data, content_type))
         return {}
 
-    def complete(self, case_id: object, outcome: str, reason: str | None = None) -> dict:
+    def complete(self, case_id: object, job_id: object, outcome: str, reason: str | None = None) -> dict:
+        self.jobs.append(job_id)
         self.completed.append((outcome, reason))
         return {}
 
@@ -56,6 +60,8 @@ def test_uses_url_from_api_not_message() -> None:
 
     Investigator(api, collect)(job)
     assert seen == ["https://from-db.example.com/"]
+    # 모든 API 호출에 같은 작업 ID를 붙인다(backend 멱등 처리의 기준)
+    assert api.jobs and set(api.jobs) == {job.job_id}
     assert [k for k, _, _ in api.uploads] == ["screenshot", "dom_summary", "redirect_chain", "network_summary"]
     assert api.completed == [("collected", None)]
 
