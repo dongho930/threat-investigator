@@ -1,0 +1,36 @@
+{
+ "dom_summary": {
+  "final_url": "http://testsites:8080/delayed.html",
+  "forms": [
+   {
+    "action_host": "testsites",
+    "inputs": [
+     {
+      "name": "card_number",
+      "placeholder": "카드번호",
+      "type": "text"
+     }
+    ],
+    "method": "get"
+   }
+  ],
+  "iframes": 0,
+  "links": 0,
+  "meta_refresh": "",
+  "password_inputs": 0,
+  "schema": "dom_summary/1",
+  "text_excerpt": "택배 배송 조회\n\n주소 불일치로 배송이 보류되었습니다. 재배송 수수료 3,000원을 결제해 주세요.",
+  "title": "배송 조회"
+ },
+ "redirect_chain": {
+  "final_url": "http://testsites:8080/delayed.html",
+  "hops": [
+   {
+    "blocked": null,
+    "status": 200,
+    "url": "http://testsites:8080/delayed.html"
+   }
+  ],
+  "schema": "redirect_chain/1"
+ }
+}

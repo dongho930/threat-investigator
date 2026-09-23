@@ -5,6 +5,7 @@ import {
   getEvidenceJson,
   listEvidence,
   listReports,
+  listVerdicts,
   screenshotUrl,
   type CaseItem,
   type DomSummary,
@@ -12,6 +13,7 @@ import {
   type NetworkSummary,
   type RedirectHop,
   type ReportItem,
+  type VerdictItem,
 } from './api'
 
 // 수집한 제목·본문·URL은 모두 신뢰하지 않는 데이터다. 텍스트 노드로만 렌더링하고 링크로 만들지 않는다 (SC-IN-01).
@@ -35,6 +37,7 @@ const KIND_LABEL: Record<string, string> = {
 interface Loaded {
   evidence: EvidenceItem[]
   reports: ReportItem[]
+  verdicts: VerdictItem[]
   dom?: DomSummary
   chain?: { hops: RedirectHop[] }
   network?: NetworkSummary
@@ -56,6 +59,64 @@ async function loadJson<T>(caseId: string, item: EvidenceItem | undefined, error
   }
 }
 
+const VERDICT_LABEL: Record<VerdictItem['status'], string> = {
+  SUSPICIOUS: '의심 징후 있음',
+  UNKNOWN: '판단 보류 (사람 검토 우선)',
+  BENIGN: '규칙상 징후 없음',
+}
+
+const TYPE_LABEL: Record<string, string> = {
+  PHISHING: '피싱',
+  SCAM: '사기',
+  ILLEGAL_GAMBLING_SUSPECTED: '불법 도박 의심',
+  MALWARE: '악성코드',
+  OTHER: '기타',
+}
+
+const POLICY_LABEL: Record<string, string> = {
+  rule_threshold_met: '강한 징후가 기준 이상',
+  weak_signals_only: '약한 징후만 있음',
+  no_signals: '규칙에 걸린 징후 없음',
+  insufficient_evidence: '수집 실패·증거 부족 (안전으로 보지 않음)',
+}
+
+function VerdictView({ verdict }: { verdict: VerdictItem }) {
+  const badge = verdict.status === 'SUSPICIOUS' ? 'badge-failed' : verdict.status === 'UNKNOWN' ? 'badge-review' : ''
+  return (
+    <div className="detail-block">
+      <h3>
+        시스템 판정 v{verdict.version} <span className={`badge ${badge}`}>{VERDICT_LABEL[verdict.status]}</span>
+      </h3>
+      <p className="muted">
+        규칙 {verdict.rule_result.version} · {POLICY_LABEL[verdict.policy_reason ?? ''] ?? verdict.policy_reason}
+        {verdict.suspected_types.length > 0 &&
+          ` · 의심 유형: ${verdict.suspected_types.map((t) => TYPE_LABEL[t] ?? t).join(', ')}`}
+        {' '}— 기술적 평가이며 최종 결론은 담당자가 내립니다.
+      </p>
+      {verdict.rule_result.signals.length > 0 && (
+        <table>
+          <thead>
+            <tr>
+              <th>유형</th>
+              <th>근거</th>
+              <th>강도</th>
+            </tr>
+          </thead>
+          <tbody>
+            {verdict.rule_result.signals.map((s) => (
+              <tr key={s.code}>
+                <td className="nowrap">{TYPE_LABEL[s.type] ?? s.type}</td>
+                <td>{s.detail}</td>
+                <td className="nowrap">{s.strong ? '강함' : '약함'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  )
+}
+
 export default function CaseDetail({ item }: { item: CaseItem }) {
   // 어느 사건의 데이터인지 함께 보관해, 사건을 바꾼 직후 이전 사건의 증거 ID로 요청하지 않게 한다.
   const [data, setData] = useState<(Loaded & { caseId: string }) | null>(null)
@@ -65,9 +126,10 @@ export default function CaseDetail({ item }: { item: CaseItem }) {
     let cancelled = false
     async function load() {
       try {
-        const [{ items }, reports] = await Promise.all([
+        const [{ items }, reports, verdicts] = await Promise.all([
           listEvidence(item.id),
           listReports(item.id).then((r) => r.items),
+          listVerdicts(item.id).then((r) => r.items),
         ])
         const errors: string[] = []
         const [dom, chain, network] = await Promise.all([
@@ -75,9 +137,9 @@ export default function CaseDetail({ item }: { item: CaseItem }) {
           loadJson<{ hops: RedirectHop[] }>(item.id, latest(items, 'redirect_chain'), errors),
           loadJson<NetworkSummary>(item.id, latest(items, 'network_summary'), errors),
         ])
-        if (!cancelled) setData({ caseId: item.id, evidence: items, reports, dom, chain, network, errors })
+        if (!cancelled) setData({ caseId: item.id, evidence: items, reports, verdicts, dom, chain, network, errors })
       } catch {
-        if (!cancelled) setData({ caseId: item.id, evidence: [], reports: [], errors: ['증거 목록을 불러오지 못했습니다.'] })
+        if (!cancelled) setData({ caseId: item.id, evidence: [], reports: [], verdicts: [], errors: ['증거 목록을 불러오지 못했습니다.'] })
       }
     }
     void load()
@@ -102,6 +164,7 @@ export default function CaseDetail({ item }: { item: CaseItem }) {
           {e}
         </p>
       ))}
+      {current?.verdicts[0] && <VerdictView verdict={current.verdicts[0]} />}
       {current && current.reports.length > 0 && (
         <div className="detail-block">
           <h3>접수된 신고 {current.reports.length}건</h3>

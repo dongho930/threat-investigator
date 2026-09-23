@@ -109,6 +109,7 @@ def test_full_flow_stores_hashed_evidence_and_serves_it(client: TestClient) -> N
         "evidence.add",
         "evidence.add",
         "case.investigate.finish",
+        "case.judge",
     ]
 
 

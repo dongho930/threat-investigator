@@ -50,7 +50,7 @@ PR 리뷰 때 해당 ID를 체크하고, 보안 이슈에는 같은 분류 라�
 |---|---|---|---|---|---|
 | SC-EH-01 | 예외 메시지로 내부 정보 노출 | 공통 예외 처리기, request_id만 응답 | `test_unhandled_error_hides_details` | 1 | ✅ |
 | SC-EH-02 | 검증 오류에 입력값 반사 | 422 응답에서 `input` 제거 | `test_unknown_field_rejected_without_echo` | 1 | ✅ |
-| SC-EH-03 | 실패를 안전으로 처리 | 조사 실패·시간초과는 BENIGN이 아닌 보류 | — | 4 | ⬜ |
+| SC-EH-03 | 실패를 안전으로 처리 | 수집 실패·증거 없음·변조된 증거는 규칙 판정에서 UNKNOWN(보류, `insufficient_evidence`), BENIGN은 온전히 수집했고 징후가 전혀 없을 때만. 재시도 소진은 `failed(retry_exhausted)` | `backend/tests/test_rules.py`, `test_judging_api.py` (`failed_collection_records_unknown_not_benign`, `tampered_evidence_is_not_used_for_judging`) | 2주차 | ✅ |
 | SC-EH-04 | Worker 실패 보고 | 정해진 사유 코드만 허용(자유 텍스트·예외 원문 거부), route 처리기 예외 시 요청 차단(fail-closed) | `test_free_text_reason_rejected`, `test_collector_crash_reports_code_only` | 2 | ✅ |
 
 ## 5. 코드오류 (SC-CE)

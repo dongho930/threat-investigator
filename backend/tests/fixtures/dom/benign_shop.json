@@ -1,0 +1,41 @@
+{
+ "dom_summary": {
+  "final_url": "http://testsites:8080/benign-shop.html?fx=1",
+  "forms": [
+   {
+    "action_host": "testsites",
+    "inputs": [
+     {
+      "name": "userid",
+      "placeholder": "",
+      "type": "text"
+     },
+     {
+      "name": "password",
+      "placeholder": "",
+      "type": "password"
+     }
+    ],
+    "method": "get"
+   }
+  ],
+  "iframes": 0,
+  "links": 0,
+  "meta_refresh": "",
+  "password_inputs": 1,
+  "schema": "dom_summary/1",
+  "text_excerpt": "초록 문구점\n\n2만 원 이상 구매 시 무료 배송. 교환·환불은 수령 후 7일 이내 가능합니다.\n\n아이디  비밀번호  로그인\n사업자등록번호 000-00-00000 · 통신판매업 신고 제0000-가상-0000호",
+  "title": "초록 문구점 - 필기구 전문"
+ },
+ "redirect_chain": {
+  "final_url": "http://testsites:8080/benign-shop.html?fx=1",
+  "hops": [
+   {
+    "blocked": null,
+    "status": 200,
+    "url": "http://testsites:8080/benign-shop.html?fx=1"
+   }
+  ],
+  "schema": "redirect_chain/1"
+ }
+}
