@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 
 import { ApiError, createCase, listCases, type CaseItem, type CaseStatus } from './api'
 import CaseDetail from './CaseDetail'
+import ReportImport from './ReportImport'
+
+const SOURCE_LABEL: Record<CaseItem['source'], string> = { manual: '수동', feed: '피드', report: '신고' }
 
 const STATUS_LABEL: Record<CaseStatus, string> = {
   queued: '대기',
@@ -109,6 +112,8 @@ export default function App() {
         )}
       </section>
 
+      <ReportImport onImported={() => void refresh()} />
+
       <section className="card">
         <div className="row">
           <h2>사건 목록</h2>
@@ -118,6 +123,7 @@ export default function App() {
           <thead>
             <tr>
               <th>상태</th>
+              <th>출처</th>
               <th>URL</th>
               <th>메모</th>
               <th>등록 시각</th>
@@ -126,7 +132,7 @@ export default function App() {
           <tbody>
             {cases.length === 0 && (
               <tr>
-                <td colSpan={4} className="muted">
+                <td colSpan={5} className="muted">
                   등록된 사건이 없습니다.
                 </td>
               </tr>
@@ -145,6 +151,7 @@ export default function App() {
                 <td>
                   <span className={`badge badge-${c.status}`}>{STATUS_LABEL[c.status]}</span>
                 </td>
+                <td className="nowrap">{SOURCE_LABEL[c.source]}</td>
                 {/* 의심 URL은 링크로 만들지 않는다: 담당자가 실수로 클릭해 직접 접속하는 것을 막는다. */}
                 <td className="url">{c.url}</td>
                 <td>{c.note ?? ''}</td>

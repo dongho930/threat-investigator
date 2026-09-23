@@ -14,7 +14,7 @@ AI 기반 사이버 위협 의심 사이트 자동 탐색·분석·제보 지원
 | `backend/` | FastAPI API, SQLAlchemy 모델, Alembic 마이그레이션, outbox relay |
 | `worker/` | Redis Streams 소비자, Playwright 격리 조사(스크린샷·페이지 요약·이동 경로·네트워크 요약), 내부 API로 증거 업로드 |
 | `egress-proxy/` | Worker 전용 송신 프록시(표준 라이브러리만 사용). 연결마다 목적지 IP 검사, 검사한 IP로 직접 연결(DNS 리바인딩 차단) |
-| `frontend/` | React + TypeScript 조사 콘솔 (nginx, 엄격한 CSP) |
+| `frontend/` | React + TypeScript 조사 콘솔 (nginx, 엄격한 CSP). URL 등록, **신고 CSV 일괄 등록**(예시: `frontend/public/report-template.csv`), 사건 상세 |
 | `testsites/` | 가상 브랜드 시험 페이지 (피싱·사기·도박·동적 렌더링·리다이렉트·SSRF·XSS·프롬프트 인젝션·정상) |
 | `docs/` | 위협 모델, 시큐어코딩 체크리스트 |
 | `.github/workflows/` | CI(테스트·린트·빌드), 보안 점검(Bandit·Semgrep·pip-audit·npm audit·gitleaks·Trivy) |

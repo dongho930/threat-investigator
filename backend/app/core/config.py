@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     evidence_max_json_bytes: int = 1024 * 1024
     evidence_retention_days: int = 90
 
+    # 신고 CSV 일괄 등록 제한
+    report_import_max_bytes: int = 1024 * 1024
+    report_import_max_rows: int = 1000
+
     # 조사 작업 임대·재발행(스위퍼)
     investigation_lease_seconds: int = 600
     queued_stale_seconds: int = 600

@@ -14,6 +14,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.security.url_policy import UrlPolicyError
 from app.services.investigation import InvestigationError
+from app.services.reports import ReportImportError
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,10 @@ def install(app: FastAPI) -> None:
 
     @app.exception_handler(InvestigationError)
     async def investigation_error(request: Request, exc: InvestigationError) -> JSONResponse:
+        return JSONResponse(status_code=exc.status_code, content={"code": exc.code, "detail": exc.message})
+
+    @app.exception_handler(ReportImportError)
+    async def report_import_error(request: Request, exc: ReportImportError) -> JSONResponse:
         return JSONResponse(status_code=exc.status_code, content={"code": exc.code, "detail": exc.message})
 
     @app.exception_handler(RequestValidationError)
