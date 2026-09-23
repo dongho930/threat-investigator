@@ -137,3 +137,20 @@ def test_connects_to_checked_ip_and_resolves_once(monkeypatch) -> None:
     asyncio.run(scenario())
     assert calls == ["rebind.example.com"]
     assert connected == ["93.184.216.34"]
+
+
+def test_unreachable_upstream_gets_502_not_silent_close() -> None:
+    """정책은 통과했지만 목적지가 연결을 받지 않으면(내려간 사이트) 조용히 끊지 않고 502로 알린다."""
+
+    async def scenario():
+        # 127.0.0.1의 닫힌 포트: 허용 목록으로 정책은 통과시키고, 연결은 거부된다.
+        policy = EgressPolicy(allowed_ports=frozenset({9}), host_allowlist=frozenset({"127.0.0.1"}))
+        proxy, port = await _start_proxy(policy)
+        async with proxy:
+            tunnel = await _raw(port, b"CONNECT 127.0.0.1:9 HTTP/1.1\r\nHost: x\r\n\r\n")
+            plain = await _raw(port, b"GET http://127.0.0.1:9/ HTTP/1.1\r\nHost: x\r\n\r\n")
+        return tunnel, plain
+
+    tunnel, plain = asyncio.run(scenario())
+    for resp in (tunnel, plain):
+        assert resp.startswith(b"HTTP/1.1 502") and b"X-Egress-Blocked: upstream_unreachable" in resp

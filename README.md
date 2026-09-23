@@ -67,7 +67,7 @@ npm run dev
 ## 위협정보 피드 (자동 탐색)
 
 `feed-collector`는 기본값으로 testsites의 **모의 피드**(가상 시험 페이지만)를 한 시간마다 받는다.
-실제 피드(Phishing.Database, MIT)를 쓰려면 `compose.yaml`의 `FEED_URL`·`FEED_CHECKSUM_URL`·`FEED_SOURCE` 세 줄을 지운다.
+실제 피드(Phishing.Database, MIT)를 쓰려면 `.env`에 `FEED_URL`·`FEED_CHECKSUM_URL`·`FEED_SOURCE`를 지정한다(`.env.example` 참고).
 이때 목록의 **실제 피싱 사이트**가 격리 Worker(송신 프록시·seccomp·Chromium 샌드박스)로 조사되므로,
 허가된 환경에서만 켜고 `FEED_MAX_PER_RUN`·`FEED_MAX_NEW_CASES_PER_DAY`로 양을 제한한다.
 
