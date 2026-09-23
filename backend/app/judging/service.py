@@ -3,6 +3,7 @@
 - 증거는 해당 작업(job_id)이 올린 것만 쓰고, 읽을 때 SHA-256을 다시 대조한다(변조된 증거로 판정하지 않음).
 - 판정은 버전으로 쌓인다(재조사·재판정 이력 보존). 시스템 판정은 decided_by=system이며 최종 결론이 아니다.
 - 사건은 판정 뒤 담당자 검토(review)로 넘어간다. 자동 신고·차단은 하지 않는다.
+- 최종 결론은 검토자가 review_case로 확정한다(decided_by=human, 새 판정 버전). 자기가 등록한 사건은 확정할 수 없다.
 """
 
 import hashlib
@@ -14,8 +15,19 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditLog, Case, DecidedBy, Evidence, EvidenceKind, Verdict, VerdictStatus
+from app.db.models import (
+    AuditLog,
+    Case,
+    CaseStatus,
+    DecidedBy,
+    Evidence,
+    EvidenceKind,
+    User,
+    Verdict,
+    VerdictStatus,
+)
 from app.judging import rules
+from app.services.cases import CaseError
 from app.services.evidence_store import LocalEvidenceStore
 
 logger = logging.getLogger(__name__)
@@ -84,3 +96,68 @@ def judge_case(db: Session, store: LocalEvidenceStore, case: Case, job_id: uuid.
 
 def list_verdicts(db: Session, case_id: uuid.UUID) -> list[Verdict]:
     return list(db.scalars(select(Verdict).where(Verdict.case_id == case_id).order_by(Verdict.version.desc())).all())
+
+
+REVIEWABLE = frozenset({CaseStatus.REVIEW, CaseStatus.HELD})
+DECISION_STATUS = {
+    VerdictStatus.SUSPICIOUS: CaseStatus.CONFIRMED,
+    VerdictStatus.BENIGN: CaseStatus.REJECTED,
+    VerdictStatus.UNKNOWN: CaseStatus.HELD,
+}
+
+
+def review_case(
+    db: Session,
+    case: Case,
+    reviewer: User,
+    *,
+    decision: VerdictStatus,
+    suspected_types: list[str],
+    reason: str,
+) -> Verdict:
+    """검토자의 판정 확정. 새 판정 버전(decided_by=human)을 쌓고 사건 상태를 바꾼다."""
+    # 같은 사건을 두 검토자가 동시에 확정해도 판정 버전이 겹치지 않도록 사건 행을 잠근다(PostgreSQL).
+    locked = db.scalar(
+        select(Case).where(Case.id == case.id).with_for_update().execution_options(populate_existing=True)
+    )
+    if locked is None:
+        raise CaseError("not_found", "사건을 찾을 수 없습니다.", 404)
+    if locked.status not in REVIEWABLE:
+        raise CaseError("not_reviewable", "검토 필요·보류 상태의 사건만 판정을 확정할 수 있습니다.", 409)
+    if locked.created_by == reviewer.id:
+        raise CaseError("self_review", "자기가 등록한 사건은 다른 검토자가 확정해야 합니다.", 403)
+
+    version = (db.scalar(select(func.max(Verdict.version)).where(Verdict.case_id == locked.id)) or 0) + 1
+    verdict = Verdict(
+        id=uuid.uuid4(),
+        case_id=locked.id,
+        version=version,
+        suspected_types=suspected_types,
+        status=decision,
+        rule_result={},
+        policy_reason=reason.strip(),
+        decided_by=DecidedBy.HUMAN,
+        reviewer_id=reviewer.id,
+    )
+    before = locked.status
+    locked.status = DECISION_STATUS[decision]
+    db.add(verdict)
+    db.add(
+        AuditLog(
+            actor=reviewer.username,
+            action="case.review",
+            target_type="case",
+            target_id=str(locked.id),
+            before={"status": before.value},
+            after={
+                "status": locked.status.value,
+                "version": version,
+                "decision": decision.value,
+                "suspected_types": suspected_types,
+            },
+        )
+    )
+    db.commit()
+    db.refresh(verdict)
+    logger.info("case reviewed id=%s version=%d decision=%s by=%s", locked.id, version, decision, reviewer.username)
+    return verdict

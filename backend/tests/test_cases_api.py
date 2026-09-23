@@ -14,7 +14,9 @@ def test_create_case_records_audit_and_outbox(client: TestClient) -> None:
     assert "created_by" not in body["case"]
 
     with client.app.state.session_factory() as db:
-        assert len(db.scalars(select(AuditLog)).all()) == 1
+        audits = db.scalars(select(AuditLog).where(AuditLog.action == "case.create")).all()
+        assert len(audits) == 1
+        assert audits[0].actor == "admin"  # 로그인 사용자가 감사 로그에 남는다
         events = db.scalars(select(OutboxEvent)).all()
         assert len(events) == 1
         assert events[0].payload["case_id"] == body["case"]["id"]

@@ -3,6 +3,7 @@ export type CaseStatus =
   | 'investigating'
   | 'judging'
   | 'review'
+  | 'confirmed'
   | 'reported'
   | 'held'
   | 'rejected'
@@ -16,6 +17,7 @@ export interface CaseItem {
   status: CaseStatus
   status_reason: string | null
   note: string | null
+  assignee: string | null
   created_at: string
 }
 
@@ -25,7 +27,8 @@ export interface CaseList {
 }
 
 export interface CaseCreateResult {
-  case: CaseItem
+  /** 이미 다른 담당자의 사건이면 null (서버가 내용을 돌려주지 않는다) */
+  case: CaseItem | null
   duplicate: boolean
 }
 
@@ -38,18 +41,71 @@ export class ApiError extends Error {
   }
 }
 
+// CSRF 토큰은 로그인·/me 응답으로 받아 메모리에만 둔다(localStorage에 저장하지 않음).
+let csrfToken: string | null = null
+let onUnauthenticated: (() => void) | null = null
+
+/** 세션이 끊기면(401) 호출할 함수. App이 로그인 화면으로 돌아가게 한다. */
+export function setUnauthenticatedHandler(handler: (() => void) | null): void {
+  onUnauthenticated = handler
+}
+
+const SAFE_METHODS = new Set(['GET', 'HEAD'])
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const method = (init?.method ?? 'GET').toUpperCase()
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (!SAFE_METHODS.has(method) && csrfToken) headers['X-CSRF-Token'] = csrfToken
   const res = await fetch(path, {
     ...init,
     credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json', ...init?.headers },
+    headers: { ...headers, ...(init?.headers as Record<string, string> | undefined) },
   })
-  const body: unknown = await res.json().catch(() => null)
+  const body: unknown = res.status === 204 ? null : await res.json().catch(() => null)
   if (!res.ok) {
     const b = (body ?? {}) as { code?: string; detail?: string }
-    throw new ApiError(b.code ?? 'http_error', b.detail ?? `요청이 실패했습니다 (${res.status})`)
+    const code = b.code ?? 'http_error'
+    if (res.status === 401 && code === 'unauthenticated') onUnauthenticated?.()
+    throw new ApiError(code, b.detail ?? `요청이 실패했습니다 (${res.status})`)
   }
   return body as T
+}
+
+export type Role = 'investigator' | 'reviewer' | 'admin'
+
+export interface Me {
+  id: string
+  username: string
+  role: Role
+  permissions: string[]
+  csrf_token: string
+}
+
+export async function login(username: string, password: string): Promise<Me> {
+  const me = await request<Me>('/api/v1/auth/login', {
+    method: 'POST',
+    body: JSON.stringify({ username, password }),
+  })
+  csrfToken = me.csrf_token
+  return me
+}
+
+export async function fetchMe(): Promise<Me> {
+  const me = await request<Me>('/api/v1/auth/me')
+  csrfToken = me.csrf_token
+  return me
+}
+
+export async function logout(): Promise<void> {
+  try {
+    await request<null>('/api/v1/auth/logout', { method: 'POST' })
+  } finally {
+    csrfToken = null
+  }
+}
+
+export function can(me: Me | null, permission: string): boolean {
+  return me?.permissions.includes(permission) ?? false
 }
 
 export function listCases(limit = 50): Promise<CaseList> {
@@ -170,12 +226,45 @@ export interface VerdictItem {
   version: number
   status: 'SUSPICIOUS' | 'BENIGN' | 'UNKNOWN'
   suspected_types: string[]
-  rule_result: { version: string; reason: string; scores: Record<string, number>; signals: VerdictSignal[] }
+  /** 시스템 판정의 규칙 근거. 검토자 판정(human)은 빈 객체다. */
+  rule_result: { version?: string; reason?: string; scores?: Record<string, number>; signals?: VerdictSignal[] }
   policy_reason: string | null
   decided_by: 'system' | 'human'
+  reviewer: string | null
   created_at: string
 }
 
 export function listVerdicts(caseId: string): Promise<{ items: VerdictItem[] }> {
   return request<{ items: VerdictItem[] }>(`/api/v1/cases/${encodeURIComponent(caseId)}/verdicts`)
+}
+
+export interface UserBrief {
+  id: string
+  username: string
+  role: Role
+}
+
+export function listInvestigators(): Promise<{ items: UserBrief[] }> {
+  return request<{ items: UserBrief[] }>('/api/v1/users?role=investigator')
+}
+
+export function assignCase(caseId: string, assigneeId: string): Promise<CaseItem> {
+  return request<CaseItem>(`/api/v1/cases/${encodeURIComponent(caseId)}/assign`, {
+    method: 'POST',
+    body: JSON.stringify({ assignee_id: assigneeId }),
+  })
+}
+
+export type Decision = VerdictItem['status']
+
+export function reviewCase(
+  caseId: string,
+  decision: Decision,
+  suspectedTypes: string[],
+  reason: string,
+): Promise<VerdictItem> {
+  return request<VerdictItem>(`/api/v1/cases/${encodeURIComponent(caseId)}/review`, {
+    method: 'POST',
+    body: JSON.stringify({ decision, suspected_types: suspectedTypes, reason }),
+  })
 }

@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.db.models import DecidedBy, VerdictStatus
 
@@ -17,6 +17,7 @@ class VerdictOut(BaseModel):
     rule_result: dict[str, Any]
     policy_reason: str | None
     decided_by: DecidedBy
+    reviewer: str | None = Field(default=None, validation_alias="reviewer_username")
     created_at: datetime
 
 

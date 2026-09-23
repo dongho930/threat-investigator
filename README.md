@@ -27,7 +27,20 @@ cp .env.example .env        # 비밀번호와 WORKER_API_TOKEN(32자 이상)을 
 docker compose up --build
 ```
 
-- 조사 콘솔: http://127.0.0.1:8080
+- 조사 콘솔: http://127.0.0.1:8080 (로그인 필요)
+- 계정은 콘솔 API가 아니라 서버 CLI로만 만든다. 비밀번호는 12자 이상이며 두 번 입력한다.
+
+```bash
+docker compose exec backend python -m app.cli create-user --username kim --role investigator   # investigator·reviewer·admin
+docker compose exec backend python -m app.cli set-active --username kim --inactive              # 비활성화(로그인 중인 세션도 종료)
+docker compose exec backend python -m app.cli reset-password --username kim
+```
+
+| 역할 | 할 수 있는 일 |
+|---|---|
+| 조사자 | URL 등록, 신고 CSV 등록, 자기가 등록했거나 배정받은 사건 조회 |
+| 검토자 | 모든 사건 조회, 조사자 배정, 판정 확정(의심 확정·제외·보류, 자기가 등록한 사건 제외) |
+| 관리자 | 위 권한 전부 |
 - 시험 페이지: http://127.0.0.1:8081 (콘솔에서는 `http://testsites:8080/phishing.html` 형태로 등록)
 
 ## 로컬 개발 (Docker 없이)
@@ -58,8 +71,8 @@ npm run dev
 |---|---|---|
 | 1 | 설계, 뼈대, CI, DB 스키마, 보안약점 체크리스트 | ✅ |
 | 2 | URL 등록 → 안전 검사 → Worker 스크린샷·이동 경로 → 해시 저장 → 콘솔 표시 | ✅ |
-| 3 | 격리 강화(송신 통제, seccomp, 연결 IP 재검사), 멱등 처리 | ⬜ |
-| 4 | 유형별 규칙 엔진, 로그인·RBAC·CSRF | ⬜ |
+| 3 | 격리 강화(송신 통제, seccomp, 연결 IP 재검사), 멱등 처리 | ✅ |
+| 4 | 유형별 규칙 엔진, 로그인·RBAC·CSRF | ✅ |
 | 5 | AI 모델 비교, 출력 검증, 외부 조회 1종 | ⬜ |
 | 6 | 보고서, 모의 제출 상태, 재분석 비교, DAST·Trivy 점검 | ⬜ |
 | 7 | 시연 시나리오, 결과보고서 | ⬜ |

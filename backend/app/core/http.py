@@ -13,6 +13,8 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.security.url_policy import UrlPolicyError
+from app.services.auth import AuthError
+from app.services.cases import CaseError
 from app.services.investigation import InvestigationError
 from app.services.reports import ReportImportError
 
@@ -29,6 +31,12 @@ SECURITY_HEADERS = {
 }
 
 
+# 상태를 바꾸는 요청이 다른 사이트에서 왔으면(브라우저가 붙이는 Sec-Fetch-Site) 세션 확인 전에 거절한다.
+# CSRF 토큰·SameSite=Strict 쿠키에 더한 한 겹이며, 로그인 요청(로그인 CSRF)도 막는다.
+_UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+_ALLOWED_FETCH_SITES = frozenset({"same-origin", "none"})
+
+
 def _request_id(request: Request) -> str:
     return getattr(request.state, "request_id", "-")
 
@@ -37,7 +45,20 @@ def install(app: FastAPI) -> None:
     @app.middleware("http")
     async def security_headers(request: Request, call_next):  # type: ignore[no-untyped-def]
         request.state.request_id = uuid.uuid4().hex
-        response = await call_next(request)
+        fetch_site = request.headers.get("sec-fetch-site")
+        if (
+            request.method in _UNSAFE_METHODS
+            and request.url.path.startswith("/api/")
+            and fetch_site is not None
+            and fetch_site not in _ALLOWED_FETCH_SITES
+        ):
+            logger.warning("cross-site request blocked path=%s site=%s", request.url.path, fetch_site)
+            response = JSONResponse(
+                status_code=403,
+                content={"code": "cross_site_request", "detail": "다른 사이트에서 온 요청은 받지 않습니다."},
+            )
+        else:
+            response = await call_next(request)
         for name, value in SECURITY_HEADERS.items():
             response.headers.setdefault(name, value)
         response.headers["X-Request-ID"] = request.state.request_id
@@ -49,6 +70,17 @@ def install(app: FastAPI) -> None:
 
     @app.exception_handler(InvestigationError)
     async def investigation_error(request: Request, exc: InvestigationError) -> JSONResponse:
+        return JSONResponse(status_code=exc.status_code, content={"code": exc.code, "detail": exc.message})
+
+    @app.exception_handler(AuthError)
+    async def auth_error(request: Request, exc: AuthError) -> JSONResponse:
+        headers = {"WWW-Authenticate": "Session"} if exc.status_code == 401 else None
+        return JSONResponse(
+            status_code=exc.status_code, content={"code": exc.code, "detail": exc.message}, headers=headers
+        )
+
+    @app.exception_handler(CaseError)
+    async def case_error(request: Request, exc: CaseError) -> JSONResponse:
         return JSONResponse(status_code=exc.status_code, content={"code": exc.code, "detail": exc.message})
 
     @app.exception_handler(ReportImportError)
