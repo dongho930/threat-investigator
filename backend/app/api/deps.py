@@ -41,9 +41,8 @@ def require_worker(settings: SettingsDep, authorization: Annotated[str | None, H
         raise HTTPException(status_code=401, detail="인증이 필요합니다.", headers={"WWW-Authenticate": "Bearer"})
 
 
-async def read_limited_body(request: Request, settings: SettingsDep) -> bytes:
+async def _read_body(request: Request, limit: int) -> bytes:
     """본문을 크기 제한을 두고 읽는다. Content-Length를 속여도 읽는 도중 끊는다."""
-    limit = max(settings.evidence_max_screenshot_bytes, settings.evidence_max_json_bytes)
     declared = request.headers.get("content-length")
     if declared is not None and (not declared.isdigit() or int(declared) > limit):
         raise HTTPException(status_code=413, detail="요청 본문이 너무 큽니다.")
@@ -55,3 +54,11 @@ async def read_limited_body(request: Request, settings: SettingsDep) -> bytes:
             raise HTTPException(status_code=413, detail="요청 본문이 너무 큽니다.")
         chunks.append(chunk)
     return b"".join(chunks)
+
+
+async def read_limited_body(request: Request, settings: SettingsDep) -> bytes:
+    return await _read_body(request, max(settings.evidence_max_screenshot_bytes, settings.evidence_max_json_bytes))
+
+
+async def read_csv_body(request: Request, settings: SettingsDep) -> bytes:
+    return await _read_body(request, settings.report_import_max_bytes)

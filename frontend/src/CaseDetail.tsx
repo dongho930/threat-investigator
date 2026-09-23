@@ -4,12 +4,14 @@ import {
   ApiError,
   getEvidenceJson,
   listEvidence,
+  listReports,
   screenshotUrl,
   type CaseItem,
   type DomSummary,
   type EvidenceItem,
   type NetworkSummary,
   type RedirectHop,
+  type ReportItem,
 } from './api'
 
 // 수집한 제목·본문·URL은 모두 신뢰하지 않는 데이터다. 텍스트 노드로만 렌더링하고 링크로 만들지 않는다 (SC-IN-01).
@@ -32,6 +34,7 @@ const KIND_LABEL: Record<string, string> = {
 
 interface Loaded {
   evidence: EvidenceItem[]
+  reports: ReportItem[]
   dom?: DomSummary
   chain?: { hops: RedirectHop[] }
   network?: NetworkSummary
@@ -62,16 +65,19 @@ export default function CaseDetail({ item }: { item: CaseItem }) {
     let cancelled = false
     async function load() {
       try {
-        const { items } = await listEvidence(item.id)
+        const [{ items }, reports] = await Promise.all([
+          listEvidence(item.id),
+          listReports(item.id).then((r) => r.items),
+        ])
         const errors: string[] = []
         const [dom, chain, network] = await Promise.all([
           loadJson<DomSummary>(item.id, latest(items, 'dom_summary'), errors),
           loadJson<{ hops: RedirectHop[] }>(item.id, latest(items, 'redirect_chain'), errors),
           loadJson<NetworkSummary>(item.id, latest(items, 'network_summary'), errors),
         ])
-        if (!cancelled) setData({ caseId: item.id, evidence: items, dom, chain, network, errors })
+        if (!cancelled) setData({ caseId: item.id, evidence: items, reports, dom, chain, network, errors })
       } catch {
-        if (!cancelled) setData({ caseId: item.id, evidence: [], errors: ['증거 목록을 불러오지 못했습니다.'] })
+        if (!cancelled) setData({ caseId: item.id, evidence: [], reports: [], errors: ['증거 목록을 불러오지 못했습니다.'] })
       }
     }
     void load()
@@ -96,6 +102,31 @@ export default function CaseDetail({ item }: { item: CaseItem }) {
           {e}
         </p>
       ))}
+      {current && current.reports.length > 0 && (
+        <div className="detail-block">
+          <h3>접수된 신고 {current.reports.length}건</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>접수번호</th>
+                <th>신고일시</th>
+                <th>신고된 URL</th>
+                <th>메모</th>
+              </tr>
+            </thead>
+            <tbody>
+              {current.reports.map((r) => (
+                <tr key={r.report_no}>
+                  <td className="nowrap">{r.report_no}</td>
+                  <td className="nowrap">{new Date(r.reported_at).toLocaleString('ko-KR')}</td>
+                  <td className="url">{r.url_reported}</td>
+                  <td>{r.note ?? ''}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       {current && current.evidence.length === 0 && <p className="muted">아직 수집된 증거가 없습니다.</p>}
 
       {shot && (

@@ -1,0 +1,5 @@
+﻿접수번호,신고일시,URL,메모
+R-2026-0001,2026-09-20 09:00,http://testsites:8080/phishing.html,은행 사칭 문자
+R-2026-0002,2026-09-20 10:30,http://testsites:8080/phishing.html,같은 사이트 중복 신고
+R-2026-0003,2026-09-21 14:00,http://testsites:8080/gambling.html,도박 광고 문자
+R-2026-0004,2026-09-22,http://169.254.169.254/latest/meta-data/,내부 주소(거부되어야 함)

@@ -12,7 +12,7 @@ export interface CaseItem {
   id: string
   url: string
   host: string
-  source: 'manual' | 'feed'
+  source: 'manual' | 'feed' | 'report'
   status: CaseStatus
   status_reason: string | null
   note: string | null
@@ -123,4 +123,36 @@ export function getEvidenceJson<T>(caseId: string, evidenceId: string): Promise<
 
 export function screenshotUrl(caseId: string, evidenceId: string): string {
   return evidencePath(caseId, evidenceId)
+}
+
+export interface ImportResult {
+  batch_id: string
+  total: number
+  created: number
+  merged: number
+  duplicate: number
+  rejected: number
+  errors: { row: number; code: string }[]
+}
+
+export interface ReportItem {
+  report_no: string
+  reported_at: string
+  url_reported: string
+  note: string | null
+  batch_id: string
+  created_at: string
+}
+
+/** 신고 목록 CSV 파일을 그대로 보낸다. 파싱·검증은 서버가 한다. */
+export function importReports(file: File): Promise<ImportResult> {
+  return request<ImportResult>('/api/v1/reports/import', {
+    method: 'POST',
+    body: file,
+    headers: { 'Content-Type': 'text/csv' },
+  })
+}
+
+export function listReports(caseId: string): Promise<{ items: ReportItem[] }> {
+  return request<{ items: ReportItem[] }>(`/api/v1/cases/${encodeURIComponent(caseId)}/reports`)
 }

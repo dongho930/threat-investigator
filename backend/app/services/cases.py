@@ -15,7 +15,15 @@ logger = logging.getLogger(__name__)
 INVESTIGATE_TOPIC = "investigate"
 
 
-def create_case(db: Session, settings: Settings, *, url: str, note: str | None, actor: str) -> tuple[Case, bool]:
+def create_case(
+    db: Session,
+    settings: Settings,
+    *,
+    url: str,
+    note: str | None,
+    actor: str,
+    source: CaseSource = CaseSource.MANUAL,
+) -> tuple[Case, bool]:
     """URL을 정책 검사 후 사건으로 등록한다. 같은 URL이 있으면 기존 사건을 돌려준다.
 
     사건·감사 로그·outbox 이벤트를 한 트랜잭션에 기록해, 작업 발행이 누락되거나 중복되지 않게 한다.
@@ -38,7 +46,7 @@ def create_case(db: Session, settings: Settings, *, url: str, note: str | None, 
         url_normalized=normalized.normalized,
         url_sha256=normalized.sha256,
         host=normalized.host,
-        source=CaseSource.MANUAL,
+        source=source,
         note=note,
         current_job_id=job_id,
         attempts=1,
@@ -50,7 +58,7 @@ def create_case(db: Session, settings: Settings, *, url: str, note: str | None, 
             action="case.create",
             target_type="case",
             target_id=str(case.id),
-            after={"url": normalized.normalized, "source": CaseSource.MANUAL.value},
+            after={"url": normalized.normalized, "source": source.value},
         )
     )
     db.add(

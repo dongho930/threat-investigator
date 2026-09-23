@@ -35,6 +35,7 @@ def _enum(cls: type[enum.Enum], name: str) -> Enum:
 class CaseSource(enum.StrEnum):
     MANUAL = "manual"
     FEED = "feed"
+    REPORT = "report"  # 기관 신고 목록(CSV 일괄 등록)
 
 
 class CaseStatus(enum.StrEnum):
@@ -132,6 +133,25 @@ class Case(Base):
 
     evidence: Mapped[list["Evidence"]] = relationship(back_populates="case")
     verdicts: Mapped[list["Verdict"]] = relationship(back_populates="case")
+    reports: Mapped[list["Report"]] = relationship(back_populates="case")
+
+
+class Report(Base):
+    """기관 신고 1건. 같은 URL의 신고는 한 사건에 병합되고, 신고 자체(접수 번호·신고 시각·원본 URL)는 모두 남긴다."""
+
+    __tablename__ = "reports"
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    case_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cases.id"), index=True)
+    # 접수 번호는 기관 안에서 유일하다. 같은 CSV를 다시 올려도 신고가 중복되지 않는다.
+    report_no: Mapped[str] = mapped_column(String(64), unique=True)
+    reported_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    url_reported: Mapped[str] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(String(500))
+    batch_id: Mapped[uuid.UUID] = mapped_column(index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    case: Mapped[Case] = relationship(back_populates="reports")
 
 
 class Evidence(Base):

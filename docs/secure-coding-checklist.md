@@ -15,6 +15,8 @@ PR 리뷰 때 해당 ID를 체크하고, 보안 이슈에는 같은 분류 라�
 | SC-IN-03 | 조사 요청 URL (SSRF) | 등록 시 스킴·호스트·IP·포트 검사. Worker: 리다이렉트를 한 단계씩 직접 따라가며 단계마다 검사, 모든 브라우저 요청을 route로 검사. **송신 프록시**: Worker는 인터넷에 직접 닿지 않고(`sandbox` 내부망), 모든 연결이 프록시에서 목적지 IP 검사를 받는다 — route가 못 막는 하위 자원 리다이렉트도 연결 시점에 차단 | `backend/tests/test_url_policy.py`, `worker/tests/test_url_guard.py`, `worker/tests/test_collector_browser.py`, `egress-proxy/tests/`, `testsites /ssrf-*`, `/sub-redirect.html` | 1·2·3 | ✅ |
 | SC-IN-04 | 증거 파일명 (경로 조작) | 저장소 키는 서버가 생성한 `<case_id>/<uuid>.<ext>`만 사용, 읽을 때 키 형식·루트 이탈 재검사, 덮어쓰기 금지(`xb`) | `backend/tests/test_evidence_store.py`, `test_storage_key_is_server_generated` | 2 | ✅ |
 | SC-IN-07 | Worker가 올리는 증거 파일 | 종류별 Content-Type·PNG 시그니처·JSON 객체 검사, 크기 제한(스트리밍 중 차단), 수집기 버전 헤더 형식 제한 | `test_invalid_evidence_rejected`, `test_oversized_evidence_rejected` | 2 | ✅ |
+| SC-IN-08 | 신고 CSV 일괄 등록 | 크기(1MB)·행 수(1000) 제한(nginx·서버 이중), UTF-8/CP949만, 필수 열 확인, 행마다 접수번호 형식·신고일시(미래 거부)·메모 길이·URL 정책 검사, 오류는 행 번호·사유 코드만 응답(입력 반사 없음), 접수번호 유니크로 재업로드 멱등 | `backend/tests/test_reports.py` | 3 | ✅ |
+| SC-IN-09 | CSV 수식 삽입 (내보내기) | 신고·수집 값을 CSV로 내보낼 때 `=`·`+`·`-`·`@`로 시작하는 칸을 무력화 (저장은 원문, 화면은 텍스트) | `test_formula_like_values_are_stored_as_text` (저장 측) | 3 | ⬜ |
 | SC-IN-05 | URL·페이지 문구의 개행 (로그 삽입) | `safe_log_value`로 제어문자 제거·길이 제한 | `backend/tests/test_logging_and_outbox.py` | 1 | ✅ |
 | SC-IN-06 | 모든 API 입력 | Pydantic 스키마, `extra="forbid"`, 길이·범위 제한 | `backend/tests/test_cases_api.py` | 1 | ✅ |
 
