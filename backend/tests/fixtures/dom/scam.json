@@ -1,0 +1,24 @@
+{
+ "dom_summary": {
+  "final_url": "http://testsites:8080/scam.html?ui=1",
+  "forms": [],
+  "iframes": 0,
+  "links": 1,
+  "meta_refresh": "",
+  "password_inputs": 0,
+  "schema": "dom_summary/1",
+  "text_excerpt": "미수령 환급금 327,500원이 확인되었습니다\n\n환급 처리를 위해 수수료 9,900원을 아래 계좌로 먼저 입금해 주세요. 오늘 자정까지 입금하지 않으면 환급이 취소됩니다.\n\n입금 계좌: 가상은행 000-0000-0000 (예금주: 환급센터)\n\nVIP 투자 리딩방\n\n원금 보장, 월 수익률 30% 확정. 지금 가입하면 첫 달 수수료 면제!\n\n카카오톡 상담 연결",
+  "title": "정부지원 환급금 조회 서비스"
+ },
+ "redirect_chain": {
+  "final_url": "http://testsites:8080/scam.html?ui=1",
+  "hops": [
+   {
+    "blocked": null,
+    "status": 200,
+    "url": "http://testsites:8080/scam.html?ui=1"
+   }
+  ],
+  "schema": "redirect_chain/1"
+ }
+}

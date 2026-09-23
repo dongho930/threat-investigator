@@ -156,3 +156,26 @@ export function importReports(file: File): Promise<ImportResult> {
 export function listReports(caseId: string): Promise<{ items: ReportItem[] }> {
   return request<{ items: ReportItem[] }>(`/api/v1/cases/${encodeURIComponent(caseId)}/reports`)
 }
+
+export interface VerdictSignal {
+  code: string
+  type: string
+  weight: number
+  strong: boolean
+  detail: string
+}
+
+export interface VerdictItem {
+  id: string
+  version: number
+  status: 'SUSPICIOUS' | 'BENIGN' | 'UNKNOWN'
+  suspected_types: string[]
+  rule_result: { version: string; reason: string; scores: Record<string, number>; signals: VerdictSignal[] }
+  policy_reason: string | null
+  decided_by: 'system' | 'human'
+  created_at: string
+}
+
+export function listVerdicts(caseId: string): Promise<{ items: VerdictItem[] }> {
+  return request<{ items: VerdictItem[] }>(`/api/v1/cases/${encodeURIComponent(caseId)}/verdicts`)
+}

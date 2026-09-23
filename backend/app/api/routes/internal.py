@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Header, Response, status
 
 from app.api.deps import DbDep, SettingsDep, StoreDep, read_limited_body, require_worker
 from app.db.models import EvidenceKind
+from app.judging import service as judging
 from app.schemas.evidence import (
     ClaimRequest,
     ClaimResult,
@@ -66,8 +67,11 @@ def upload_evidence(
 
 
 @router.post("/cases/{case_id}/complete", response_model=CompleteResult)
-def complete(case_id: uuid.UUID, body: CompleteRequest, db: DbDep) -> CompleteResult:
-    case = investigation.complete_case(db, case_id, body.job_id, body.outcome, body.reason)
+def complete(case_id: uuid.UUID, body: CompleteRequest, db: DbDep, store: StoreDep) -> CompleteResult:
+    case, changed = investigation.complete_case(db, case_id, body.job_id, body.outcome, body.reason)
+    if changed:
+        # 수집 성공이면 증거로 규칙 판정, 실패면 '판단 불가(UNKNOWN)'를 기록한다(실패를 안전으로 두지 않음).
+        judging.judge_case(db, store, case, body.job_id, collected=body.outcome is investigation.Outcome.COLLECTED)
     return CompleteResult(case_id=case.id, status=case.status, status_reason=case.status_reason)
 
 

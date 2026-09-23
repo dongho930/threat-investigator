@@ -210,7 +210,8 @@ def add_evidence(
 
 def complete_case(
     db: Session, case_id: uuid.UUID, job_id: uuid.UUID, outcome: Outcome, reason: FailureReason | None
-) -> Case:
+) -> tuple[Case, bool]:
+    """조사 완료 보고. (사건, 이번 호출에서 상태가 바뀌었는지)를 돌려준다."""
     case = db.get(Case, case_id, with_for_update=True)
     if case is None:
         raise _not_found()
@@ -218,11 +219,11 @@ def complete_case(
         raise _stale_job()
     if case.status in (CaseStatus.REVIEW, CaseStatus.FAILED) and case.lease_expires_at is None:
         # 같은 작업이 완료를 다시 보고한 경우(응답 유실 후 재시도): 현재 상태를 그대로 돌려준다.
-        return case
+        return case, False
     if case.status is not CaseStatus.INVESTIGATING:
         raise InvestigationError("not_investigating", "조사 중인 사건이 아닙니다.", 409)
     if outcome is Outcome.COLLECTED:
-        # 판정 엔진(4·5주차)이 붙기 전까지는 수집이 끝나면 담당자 검토로 넘긴다.
+        # 규칙 판정을 기록한 뒤 담당자 검토로 넘긴다(판정은 라우트에서 증거 저장소와 함께 실행).
         new_status, new_reason = CaseStatus.REVIEW, None
     else:
         new_status, new_reason = CaseStatus.FAILED, (reason or FailureReason.COLLECTOR_ERROR).value
@@ -237,7 +238,7 @@ def complete_case(
     case.status_reason = new_reason
     case.lease_expires_at = None
     db.commit()
-    return case
+    return case, True
 
 
 def list_evidence(db: Session, case_id: uuid.UUID) -> list[Evidence]:

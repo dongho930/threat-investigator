@@ -1,0 +1,36 @@
+{
+ "dom_summary": {
+  "final_url": "http://testsites:8080/gambling.html",
+  "forms": [
+   {
+    "action_host": "testsites",
+    "inputs": [
+     {
+      "name": "deposit_amount",
+      "placeholder": "",
+      "type": "text"
+     }
+    ],
+    "method": "get"
+   }
+  ],
+  "iframes": 0,
+  "links": 0,
+  "meta_refresh": "",
+  "password_inputs": 0,
+  "schema": "dom_summary/1",
+  "text_excerpt": "국내 최고 배당률 · 해외 스포츠 실시간 베팅\n첫 충전 30% 보너스 · 매충 10%\n충전·환전 24시간 5분 이내 처리\nUFC · 복싱 · 아이스하키 라이브 베팅\n\n가입코드: WIN777 · 텔레그램 고객센터 문의\n\n충전 금액  충전 신청",
+  "title": "WINNER BET - 스포츠 실시간 베팅"
+ },
+ "redirect_chain": {
+  "final_url": "http://testsites:8080/gambling.html",
+  "hops": [
+   {
+    "blocked": null,
+    "status": 200,
+    "url": "http://testsites:8080/gambling.html"
+   }
+  ],
+  "schema": "redirect_chain/1"
+ }
+}
