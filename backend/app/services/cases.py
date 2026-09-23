@@ -13,6 +13,11 @@ from app.security.url_policy import normalize_candidate_url
 logger = logging.getLogger(__name__)
 
 INVESTIGATE_TOPIC = "investigate"
+FEED_TOPIC = "investigate_feed"  # 낮은 우선순위 스트림으로 발행된다
+
+
+def topic_for(source: CaseSource) -> str:
+    return FEED_TOPIC if source is CaseSource.FEED else INVESTIGATE_TOPIC
 
 
 def create_case(
@@ -23,6 +28,7 @@ def create_case(
     note: str | None,
     actor: str,
     source: CaseSource = CaseSource.MANUAL,
+    source_ref: str | None = None,
 ) -> tuple[Case, bool]:
     """URL을 정책 검사 후 사건으로 등록한다. 같은 URL이 있으면 기존 사건을 돌려준다.
 
@@ -47,6 +53,7 @@ def create_case(
         url_sha256=normalized.sha256,
         host=normalized.host,
         source=source,
+        source_ref=source_ref,
         note=note,
         current_job_id=job_id,
         attempts=1,
@@ -63,7 +70,7 @@ def create_case(
     )
     db.add(
         OutboxEvent(
-            topic=INVESTIGATE_TOPIC,
+            topic=topic_for(source),
             payload={"job_id": str(job_id), "case_id": str(case.id), "stage": "investigate", "attempt": 1},
         )
     )

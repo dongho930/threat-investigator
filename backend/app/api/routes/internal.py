@@ -12,22 +12,30 @@ from fastapi import APIRouter, Depends, Header, Response, status
 
 from app.api.deps import DbDep, SettingsDep, StoreDep, read_limited_body, require_worker
 from app.db.models import EvidenceKind
-from app.schemas.evidence import ClaimRequest, ClaimResult, CompleteRequest, CompleteResult, EvidenceOut
-from app.services import investigation
+from app.schemas.evidence import (
+    ClaimRequest,
+    ClaimResult,
+    CompleteRequest,
+    CompleteResult,
+    EvidenceOut,
+    FeedImportRequest,
+    FeedImportResponse,
+)
+from app.services import feed, investigation
 
-router = APIRouter(prefix="/internal/v1/cases", tags=["internal"], dependencies=[Depends(require_worker)])
+router = APIRouter(prefix="/internal/v1", tags=["internal"], dependencies=[Depends(require_worker)])
 
 COLLECTOR_VERSION_MAX = 50
 
 
-@router.post("/{case_id}/claim", response_model=ClaimResult)
+@router.post("/cases/{case_id}/claim", response_model=ClaimResult)
 def claim(case_id: uuid.UUID, body: ClaimRequest, db: DbDep, settings: SettingsDep) -> ClaimResult:
     case = investigation.claim_case(db, case_id, body.job_id, settings)
     # 조사 대상 URL은 큐 메시지가 아니라 여기서 DB 값으로 돌려준다(메시지 위·변조 대비).
     return ClaimResult(case_id=case.id, url=case.url_normalized, status=case.status)
 
 
-@router.put("/{case_id}/evidence/{kind}", response_model=EvidenceOut, status_code=status.HTTP_201_CREATED)
+@router.put("/cases/{case_id}/evidence/{kind}", response_model=EvidenceOut, status_code=status.HTTP_201_CREATED)
 def upload_evidence(
     case_id: uuid.UUID,
     kind: EvidenceKind,
@@ -57,7 +65,15 @@ def upload_evidence(
     return EvidenceOut.model_validate(evidence)
 
 
-@router.post("/{case_id}/complete", response_model=CompleteResult)
+@router.post("/cases/{case_id}/complete", response_model=CompleteResult)
 def complete(case_id: uuid.UUID, body: CompleteRequest, db: DbDep) -> CompleteResult:
     case = investigation.complete_case(db, case_id, body.job_id, body.outcome, body.reason)
     return CompleteResult(case_id=case.id, status=case.status, status_reason=case.status_reason)
+
+
+@router.post("/feed/import", response_model=FeedImportResponse)
+def import_feed(body: FeedImportRequest, db: DbDep, settings: SettingsDep) -> FeedImportResponse:
+    """피드 수집기가 체크섬을 확인한 URL 목록을 등록한다. URL마다 정책 검사, 하루 신규 사건 수 제한."""
+    urls = body.urls[: settings.feed_batch_max_items]
+    result = feed.import_feed(db, settings, source=body.source, urls=urls)
+    return FeedImportResponse(**result.__dict__)

@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.db.models import AuditLog, Case, CaseStatus, OutboxEvent
-from app.services.cases import INVESTIGATE_TOPIC
+from app.services.cases import topic_for
 from app.services.investigation import SystemReason, aware
 
 logger = logging.getLogger(__name__)
@@ -72,7 +72,7 @@ def sweep(db: Session, settings: Settings, *, now: datetime | None = None) -> di
             case.updated_at = now
             db.add(
                 OutboxEvent(
-                    topic=INVESTIGATE_TOPIC,
+                    topic=topic_for(case.source),
                     payload={
                         "job_id": str(job_id),
                         "case_id": str(case.id),

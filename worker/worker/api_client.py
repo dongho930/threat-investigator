@@ -79,6 +79,11 @@ class ApiClient:
         # 같은 작업의 재업로드는 backend가 기존 증거를 돌려준다(멱등).
         return self._request("PUT", f"/internal/v1/cases/{case_id}/evidence/{kind}", data, content_type, job_id)
 
+    def import_feed(self, source: str, urls: list[str]) -> dict:
+        """피드 수집기가 체크섬을 확인한 URL 목록을 등록한다."""
+        body = json.dumps({"source": source, "urls": urls}).encode()
+        return self._request("POST", "/internal/v1/feed/import", body, "application/json")
+
     def complete(self, case_id: uuid.UUID, job_id: uuid.UUID, outcome: str, reason: str | None = None) -> dict:
         body = json.dumps({"job_id": str(job_id), "outcome": outcome, "reason": reason}).encode()
         return self._request("POST", f"/internal/v1/cases/{case_id}/complete", body, "application/json")

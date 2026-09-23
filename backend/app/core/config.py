@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://app:app@localhost:5432/investigator"
     redis_url: str = "redis://localhost:6379/0"
     job_stream: str = "jobs:investigate"
+    # 피드로 자동 탐색한 사건은 우선순위가 낮은 별도 스트림으로 보낸다(신고·수동 건 먼저 처리).
+    feed_job_stream: str = "jobs:investigate:feed"
 
     cors_origins: list[str] = Field(default_factory=list)
 
@@ -34,6 +36,10 @@ class Settings(BaseSettings):
     # 신고 CSV 일괄 등록 제한
     report_import_max_bytes: int = 1024 * 1024
     report_import_max_rows: int = 1000
+
+    # 위협정보 피드 자동 수집: 하루에 새로 만드는 사건 수 상한, 한 번에 받는 URL 수 상한
+    feed_max_new_cases_per_day: int = 100
+    feed_batch_max_items: int = 500
 
     # 조사 작업 임대·재발행(스위퍼)
     investigation_lease_seconds: int = 600

@@ -13,6 +13,7 @@ AI 기반 사이버 위협 의심 사이트 자동 탐색·분석·제보 지원
 |---|---|
 | `backend/` | FastAPI API, SQLAlchemy 모델, Alembic 마이그레이션, outbox relay |
 | `worker/` | Redis Streams 소비자, Playwright 격리 조사(스크린샷·페이지 요약·이동 경로·네트워크 요약), 내부 API로 증거 업로드 |
+| `worker/worker/feed.py` | 위협정보 피드 자동 수집기(`feed-collector` 서비스). 체크섬 검증 후 내부 API로 등록, 피드 건은 낮은 우선순위 스트림 |
 | `egress-proxy/` | Worker 전용 송신 프록시(표준 라이브러리만 사용). 연결마다 목적지 IP 검사, 검사한 IP로 직접 연결(DNS 리바인딩 차단) |
 | `frontend/` | React + TypeScript 조사 콘솔 (nginx, 엄격한 CSP). URL 등록, **신고 CSV 일괄 등록**(예시: `frontend/public/report-template.csv`), 사건 상세 |
 | `testsites/` | 가상 브랜드 시험 페이지 (피싱·사기·도박·동적 렌더링·리다이렉트·SSRF·XSS·프롬프트 인젝션·정상) |
@@ -62,5 +63,12 @@ npm run dev
 | 5 | AI 모델 비교, 출력 검증, 외부 조회 1종 | ⬜ |
 | 6 | 보고서, 모의 제출 상태, 재분석 비교, DAST·Trivy 점검 | ⬜ |
 | 7 | 시연 시나리오, 결과보고서 | ⬜ |
+
+## 위협정보 피드 (자동 탐색)
+
+`feed-collector`는 기본값으로 testsites의 **모의 피드**(가상 시험 페이지만)를 한 시간마다 받는다.
+실제 피드(Phishing.Database, MIT)를 쓰려면 `compose.yaml`의 `FEED_URL`·`FEED_CHECKSUM_URL`·`FEED_SOURCE` 세 줄을 지운다.
+이때 목록의 **실제 피싱 사이트**가 격리 Worker(송신 프록시·seccomp·Chromium 샌드박스)로 조사되므로,
+허가된 환경에서만 켜고 `FEED_MAX_PER_RUN`·`FEED_MAX_NEW_CASES_PER_DAY`로 양을 제한한다.
 
 보안 설계는 [docs/threat-model.md](docs/threat-model.md), 대응 현황은 [docs/secure-coding-checklist.md](docs/secure-coding-checklist.md)를 본다.

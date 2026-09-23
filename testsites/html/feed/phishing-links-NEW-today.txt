@@ -1,0 +1,6 @@
+# 시험용 모의 피드: 가상 시험 페이지만 담는다(실제 피드 Phishing.Database와 같은 형식, 한 줄에 URL 하나)
+http://testsites:8080/phishing.html?feed=mock
+http://testsites:8080/gambling.html?feed=mock
+http://testsites:8080/scam.html?feed=mock
+http://169.254.169.254/latest/meta-data/
+http://testsites:8080/phishing.html?feed=mock

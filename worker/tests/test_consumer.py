@@ -84,3 +84,57 @@ def test_invalid_messages_are_dead_lettered(fields: dict[str, str]) -> None:
 def test_parse_job_rejects_pickle_like_payload() -> None:
     with pytest.raises(InvalidMessage):
         parse_job({"payload": "\x80\x04\x95"})
+
+
+class FakeStreams(FakeRedis):
+    """스트림별 대기 메시지를 흉내 낸다(우선순위 시험용)."""
+
+    def __init__(self, queued: dict[str, list[tuple[str, dict[str, str]]]]) -> None:
+        super().__init__()
+        self.queued = queued
+        self.read_calls: list[tuple[str, ...]] = []
+
+    def xautoclaim(self, stream, group, consumer, min_idle, start_id="0-0", count=5):
+        return ("0-0", [], [])
+
+    def xreadgroup(self, group, consumer, streams, count=1, block=None):
+        self.read_calls.append(tuple(streams))
+        out = []
+        for name in streams:
+            if self.queued.get(name):
+                out.append((name, [self.queued[name].pop(0)]))
+        return out
+
+    def xack(self, stream: str, group: str, entry_id: str) -> int:
+        self.acked.append(f"{stream}:{entry_id}")
+        return 1
+
+
+PRIO = ConsumerConfig(stream="jobs:main", low_priority_stream="jobs:feed", max_deliveries=3)
+
+
+def test_high_priority_stream_is_served_before_feed() -> None:
+    r = FakeStreams({"jobs:main": [("1-0", _fields())], "jobs:feed": [("9-0", _fields()), ("9-1", _fields())]})
+    seen: list[object] = []
+    c = Consumer(r, seen.append, PRIO)
+    c.run_once()
+    assert r.acked == ["jobs:main:1-0"]  # 신고·수동 건이 먼저
+    c.run_once()
+    c.run_once()
+    assert r.acked == ["jobs:main:1-0", "jobs:feed:9-0", "jobs:feed:9-1"]
+
+
+def test_feed_waits_while_main_has_work() -> None:
+    r = FakeStreams({"jobs:main": [("1-0", _fields()), ("1-1", _fields())], "jobs:feed": [("9-0", _fields())]})
+    c = Consumer(r, lambda job: None, PRIO)
+    c.run_once()
+    c.run_once()
+    assert r.acked == ["jobs:main:1-0", "jobs:main:1-1"]
+    # 두 번 모두 첫 비차단 읽기에서 주 스트림만 읽었다
+    assert r.read_calls == [("jobs:main",), ("jobs:main",)]
+
+
+def test_dead_letter_records_source_stream() -> None:
+    r = FakeStreams({})
+    Consumer(r, lambda job: None, PRIO).process("5-0", {"payload": "not json"}, "jobs:feed")
+    assert r.added[0][1]["source_stream"] == "jobs:feed" and r.acked == ["jobs:feed:5-0"]
