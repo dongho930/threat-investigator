@@ -22,6 +22,7 @@ HEAD_TIMEOUT_S = 10.0
 CONNECT_TIMEOUT_S = 10.0
 IDLE_TIMEOUT_S = 30.0
 MAX_CONNECTION_S = 120.0
+UPSTREAM_UNREACHABLE = "upstream_unreachable"
 _CONTROL = re.compile(r"[\x00-\x1f\x7f]")
 _HOP_BY_HOP = frozenset(
     {"connection", "keep-alive", "proxy-connection", "proxy-authorization", "proxy-authenticate", "te", "upgrade"}
@@ -108,7 +109,12 @@ class EgressProxy:
         if not decision.allowed:
             return decision, None
         # 검사한 IP로 직접 연결한다. 호스트 이름을 다시 넘기지 않는다.
-        streams = await asyncio.wait_for(asyncio.open_connection(decision.ip, port), CONNECT_TIMEOUT_S)
+        try:
+            streams = await asyncio.wait_for(asyncio.open_connection(decision.ip, port), CONNECT_TIMEOUT_S)
+        except (OSError, TimeoutError):
+            # 목적지 서버가 연결을 받지 않음(이미 내려간 사이트 등). 정책 차단과 구분해 502로 알린다.
+            logger.info("egress host=%s port=%d upstream_unreachable", _safe(host), port)
+            return Decision(False, UPSTREAM_UNREACHABLE, decision.ip), None
         return decision, streams
 
     async def _connect(self, reader: asyncio.StreamReader, writer: asyncio.StreamWriter, target: str) -> None:
@@ -119,7 +125,7 @@ class EgressProxy:
             return
         decision, streams = await self._open(host, port)
         if streams is None:
-            await self._reply(writer, 403, decision.reason or "blocked")
+            await self._reply(writer, self._status_for(decision), decision.reason or "blocked")
             return
         up_reader, up_writer = streams
         writer.write(b"HTTP/1.1 200 Connection Established\r\n\r\n")
@@ -146,7 +152,7 @@ class EgressProxy:
             return
         decision, streams = await self._open(host, port)
         if streams is None:
-            await self._reply(writer, 403, decision.reason or "blocked")
+            await self._reply(writer, self._status_for(decision), decision.reason or "blocked")
             return
         up_reader, up_writer = streams
         path = (parts.path or "/") + (f"?{parts.query}" if parts.query else "")
@@ -190,8 +196,18 @@ class EgressProxy:
             u_writer.close()
 
     @staticmethod
+    def _status_for(decision: Decision) -> int:
+        return 502 if decision.reason == UPSTREAM_UNREACHABLE else 403
+
+    @staticmethod
     async def _reply(writer: asyncio.StreamWriter, status: int, reason: str) -> None:
-        texts = {400: "Bad Request", 403: "Forbidden", 431: "Request Header Fields Too Large", 503: "Busy"}
+        texts = {
+            400: "Bad Request",
+            403: "Forbidden",
+            431: "Request Header Fields Too Large",
+            502: "Bad Gateway",
+            503: "Busy",
+        }
         body = json.dumps({"blocked": reason}).encode()
         writer.write(
             f"HTTP/1.1 {status} {texts.get(status, 'Error')}\r\n".encode()

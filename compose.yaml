@@ -124,13 +124,14 @@ services:
       WORKER_API_TOKEN: ${WORKER_API_TOKEN:?set WORKER_API_TOKEN in .env}
       EGRESS_PROXY_URL: http://egress-proxy:3128
       FEED_ENABLED: "true"
-      # 개발·시연 기본값: testsites의 모의 피드(가상 시험 페이지만). 실제 피드(Phishing.Database)를 쓰려면
-      # 아래 세 줄을 지운다. 그러면 실제 피싱 사이트가 격리 Worker로 조사된다.
-      FEED_URL: http://testsites:8080/feed/phishing-links-NEW-today.txt
-      FEED_CHECKSUM_URL: http://testsites:8080/feed/phishing-links-NEW-today.txt.sha256
-      FEED_SOURCE: mock-feed
-      FEED_INTERVAL_SECONDS: "3600"
-      FEED_MAX_PER_RUN: "20"
+      # 기본값: testsites의 모의 피드(가상 시험 페이지만). 실제 피드(Phishing.Database)는 .env에서
+      # FEED_URL·FEED_CHECKSUM_URL·FEED_SOURCE를 지정해 켠다(.env.example 참고).
+      # 실제 피드를 켜면 목록의 실제 피싱 사이트가 격리 Worker로 조사되므로 허가된 환경에서만 쓴다.
+      FEED_URL: ${FEED_URL:-http://testsites:8080/feed/phishing-links-NEW-today.txt}
+      FEED_CHECKSUM_URL: ${FEED_CHECKSUM_URL:-http://testsites:8080/feed/phishing-links-NEW-today.txt.sha256}
+      FEED_SOURCE: ${FEED_SOURCE:-mock-feed}
+      FEED_INTERVAL_SECONDS: ${FEED_INTERVAL_SECONDS:-3600}
+      FEED_MAX_PER_RUN: ${FEED_MAX_PER_RUN:-20}
     read_only: true
     tmpfs: ["/tmp"]
     depends_on:
