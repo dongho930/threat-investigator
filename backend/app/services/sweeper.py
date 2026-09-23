@@ -2,6 +2,7 @@
 
 - 대기(queued) 상태로 오래 머문 사건: 메시지가 유실됐거나 처리 없이 ACK된 경우
 - 조사 중(investigating)인데 임대가 끝난 사건: Worker가 죽었거나 작업이 dead-letter로 간 경우
+- AI 판정 중(judging)으로 오래 머문 사건: ai-judge가 멈춘 경우 → 보류(model_unavailable)로 검토에 넘긴다
 
 둘 다 새 작업 ID로 다시 발행한다. 이전 작업은 stale_job으로 거절되므로 두 작업이 함께 진행되지 않는다.
 발행 횟수가 상한에 이르면 retry_exhausted로 실패 처리해 무한 재시도를 막는다(실패를 안전으로 두지 않는다).
@@ -16,6 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.core.config import Settings
 from app.db.models import AuditLog, Case, CaseStatus, OutboxEvent
+from app.judging.ai_worker import fallback_stale
 from app.services.cases import topic_for
 from app.services.investigation import SystemReason, aware
 
@@ -90,6 +92,12 @@ def sweep(db: Session, settings: Settings, *, now: datetime | None = None) -> di
             )
         )
     db.commit()
-    if counts["requeued"] or counts["exhausted"]:
-        logger.info("sweep requeued=%d exhausted=%d", counts["requeued"], counts["exhausted"])
+    counts["ai_fallback"] = fallback_stale(db, settings, now=now)
+    if any(counts.values()):
+        logger.info(
+            "sweep requeued=%d exhausted=%d ai_fallback=%d",
+            counts["requeued"],
+            counts["exhausted"],
+            counts["ai_fallback"],
+        )
     return counts

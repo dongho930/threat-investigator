@@ -231,7 +231,22 @@ export interface VerdictItem {
   policy_reason: string | null
   decided_by: 'system' | 'human'
   reviewer: string | null
+  /** AI 판단 기록. 모델이 쓴 문장은 없고 선택지·신호 코드·오류 코드만 있다. */
+  model_result?: ModelResult | null
   created_at: string
+}
+
+export interface ModelResult {
+  used: boolean
+  error: string | null
+  injection: string[]
+  model?: string
+  revision?: string
+  site_type?: string
+  signals?: string[]
+  /** 모델 자체 확신도(보정 전). 악성일 확률이 아니다. */
+  confidence?: number | null
+  latency_ms?: number
 }
 
 export function listVerdicts(caseId: string): Promise<{ items: VerdictItem[] }> {

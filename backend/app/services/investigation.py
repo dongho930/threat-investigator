@@ -209,7 +209,13 @@ def add_evidence(
 
 
 def complete_case(
-    db: Session, case_id: uuid.UUID, job_id: uuid.UUID, outcome: Outcome, reason: FailureReason | None
+    db: Session,
+    case_id: uuid.UUID,
+    job_id: uuid.UUID,
+    outcome: Outcome,
+    reason: FailureReason | None,
+    *,
+    ai_enabled: bool = False,
 ) -> tuple[Case, bool]:
     """조사 완료 보고. (사건, 이번 호출에서 상태가 바뀌었는지)를 돌려준다."""
     case = db.get(Case, case_id, with_for_update=True)
@@ -217,14 +223,18 @@ def complete_case(
         raise _not_found()
     if case.current_job_id != job_id:
         raise _stale_job()
-    if case.status in (CaseStatus.REVIEW, CaseStatus.FAILED) and case.lease_expires_at is None:
+    # judging은 ai-judge가 임대(lease)를 잡고 있을 수 있으므로 임대와 관계없이 완료된 것으로 본다.
+    if case.status is CaseStatus.JUDGING or (
+        case.status in (CaseStatus.REVIEW, CaseStatus.FAILED) and case.lease_expires_at is None
+    ):
         # 같은 작업이 완료를 다시 보고한 경우(응답 유실 후 재시도): 현재 상태를 그대로 돌려준다.
         return case, False
     if case.status is not CaseStatus.INVESTIGATING:
         raise InvestigationError("not_investigating", "조사 중인 사건이 아닙니다.", 409)
     if outcome is Outcome.COLLECTED:
         # 규칙 판정을 기록한 뒤 담당자 검토로 넘긴다(판정은 라우트에서 증거 저장소와 함께 실행).
-        new_status, new_reason = CaseStatus.REVIEW, None
+        # AI 판정을 켜면 judging에 두고 ai-judge가 모델 판단을 더한 뒤 검토로 넘긴다.
+        new_status, new_reason = (CaseStatus.JUDGING if ai_enabled else CaseStatus.REVIEW), None
     else:
         new_status, new_reason = CaseStatus.FAILED, (reason or FailureReason.COLLECTOR_ERROR).value
     _audit(

@@ -81,4 +81,6 @@ PR 리뷰 때 해당 ID를 체크하고, 보안 이슈에는 같은 분류 라�
 
 | ID | 위험 지점 | 대책 | 시험 | 주차 | 상태 |
 |---|---|---|---|---|---|
-| SC-AI-01 | 프롬프트 인젝션 | 페이지 문구 분리 전달, 모델에 도구 권한 없음, 출력 스키마·허용값 검증, 모델 출력만으로 제보 금지 | `testsites/html/prompt-injection.html` | 5 | ⬜ |
+| SC-AI-01 | 프롬프트 인젝션 | 모델 호출 **전에** 코드가 AI 지시문 형태(역할 표시·채팅 템플릿 토큰·가짜 구분자·지시 무시·판정 덮어쓰기)를 찾으면 그 페이지는 모델에 보내지 않고 보류, 페이지 글은 `<untrusted_page>` 데이터 구역에 JSON으로 넣고 `<`·`>`를 이스케이프(구분자 흉내 차단), 모델에 도구 권한 없음, 출력은 JSON 스키마 강제 + Pydantic 재검증(허용값·추가 필드 거부·크기 제한), 자유 문장은 받지 않음, **모델만으로 SUSPICIOUS 불가**·규칙과 충돌 시 보류 | `backend/tests/test_ai_judge.py` (`test_injection_*`, `test_llm_request_keeps_page_inside_data_block`, `test_model_alone_never_makes_suspicious`, `test_injection_page_is_not_sent_to_model`), `testsites/html/prompt-injection.html` | 2·5 | ✅ |
+| SC-AI-02 | 모델 공급망 | 가중치는 커밋 고정 URL + 파일별 SHA-256 검증(빌드 때만 다운로드), 서버 이미지 다이제스트 고정, safetensors·GGUF만(원격 코드·pickle 없음 확인), 실행 중에는 인터넷 없는 `ai` 네트워크·비root·읽기 전용·`HF_HUB_OFFLINE` | `ai/laya/Dockerfile`, `ai/llm/Dockerfile`, Trivy(ai/laya·ai/llm) | 2 | ✅ |
+| SC-AI-03 | 모델 장애·지연 | 시간 제한·응답 크기 제한, 실패는 정해진 코드만 기록하고 보류(UNKNOWN), ai-judge가 멈추면 스위퍼가 보류로 넘김, 재조사로 바뀐 사건에 옛 결과를 쓰지 않음 | `test_model_failure_goes_to_hold_not_safe`, `test_sweeper_releases_case_when_ai_judge_is_down`, `test_stale_result_is_not_written_after_reinvestigation`, `test_post_json_*` | 2 | ✅ |

@@ -15,6 +15,8 @@ class VerdictOut(BaseModel):
     status: VerdictStatus
     suspected_types: list[str]
     rule_result: dict[str, Any]
+    # AI 판정 기록: 모델·리비전·선택지·신호 코드·자체 확신도(보정 전)·오류 코드·인젝션 탐지 코드. 모델이 쓴 문장은 없다.
+    model_result: dict[str, Any] | None = None
     policy_reason: str | None
     decided_by: DecidedBy
     reviewer: str | None = Field(default=None, validation_alias="reviewer_username")

@@ -1,0 +1,10 @@
+{
+  "_note": "개발용 정답 라벨(시험 페이지 7개). 평가용 자료(D1·D2)가 아니다. 모델 비교 도구(app.judging.compare)가 쓴다.",
+  "phishing": "phishing",
+  "delayed": "phishing",
+  "prompt_injection": "phishing",
+  "scam": "scam",
+  "gambling": "gambling",
+  "benign_shop": "normal",
+  "xss_title": "normal"
+}

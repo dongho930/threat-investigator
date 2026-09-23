@@ -47,6 +47,18 @@ class Settings(BaseSettings):
     login_max_failures: int = Field(default=5, ge=1, le=100)
     login_lockout_minutes: int = Field(default=15, ge=1, le=24 * 60)
 
+    # AI 판정(ai-judge). none이면 규칙 판정만 한다(기준선). 모델 서버는 인터넷이 없는 ai 네트워크에만 있다.
+    ai_model: Literal["none", "laya", "qwen"] = "none"
+    laya_url: str = "http://laya:8000"
+    llm_url: str = "http://llm:8080"
+    llm_revision: str = "Qwen/Qwen3-1.7B-GGUF@90862c4"
+    ai_timeout_seconds: float = Field(default=120, gt=0, le=600)
+    # 모델 자체 확신도가 이보다 낮으면 기권으로 본다(보정 전 값이라 결과보고서에서 다시 정한다).
+    ai_min_confidence: float = Field(default=0.6, ge=0, le=1)
+    # ai-judge가 멈춰 judging에 이만큼 머문 사건은 스위퍼가 보류(model_unavailable)로 넘긴다.
+    ai_judge_stale_seconds: int = 600
+    ai_poll_seconds: float = 2.0
+
     # 조사 작업 임대·재발행(스위퍼)
     investigation_lease_seconds: int = 600
     queued_stale_seconds: int = 600

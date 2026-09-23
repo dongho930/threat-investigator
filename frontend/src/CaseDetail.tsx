@@ -81,6 +81,11 @@ const TYPE_LABEL: Record<string, string> = {
 }
 
 const POLICY_LABEL: Record<string, string> = {
+  rule_model_agree: '규칙과 AI 판단이 일치',
+  rule_model_conflict: '규칙과 AI 판단이 달라 보류',
+  model_only_signal: 'AI만 의심해 보류 (AI 단독으로는 의심 판정을 내리지 않음)',
+  model_unavailable: 'AI 판단을 받지 못해 보류',
+  prompt_injection_suspected: '페이지에 AI 조작 시도 문구가 있어 AI를 쓰지 않음',
   rule_threshold_met: '강한 징후가 기준 이상',
   weak_signals_only: '약한 징후만 있음',
   no_signals: '규칙에 걸린 징후 없음',
@@ -236,6 +241,40 @@ function AssignPanel({ item, onDone }: { item: CaseItem; onDone: () => void }) {
   )
 }
 
+const SITE_LABEL: Record<string, string> = { phishing: '피싱', scam: '사기', gambling: '불법 도박', normal: '해당 없음' }
+
+const MODEL_ERROR_LABEL: Record<string, string> = {
+  timeout: '응답 시간 초과',
+  unreachable: '모델 서버 연결 실패',
+  schema_violation: '허용되지 않은 형식으로 답함',
+  invalid_output: '응답 형식 오류',
+  judge_timeout: 'AI 판정 처리기가 응답하지 않음',
+  model_disabled: 'AI 판정 꺼짐',
+}
+
+function policyText(reason: string | null): string {
+  if (!reason) return ''
+  const [base = '', extra] = reason.split('+')
+  const text = POLICY_LABEL[base] ?? base
+  return extra === 'model_abstained' ? `${text} (AI 확신도가 낮아 AI 판단은 반영 안 함)` : text
+}
+
+function ModelView({ result }: { result: NonNullable<VerdictItem['model_result']> }) {
+  if (result.injection.length > 0) {
+    return <p className="muted">AI 모델: 사용 안 함 — 조작 시도 문구 탐지({result.injection.join(', ')})</p>
+  }
+  if (result.error) {
+    return <p className="muted">AI 모델: {MODEL_ERROR_LABEL[result.error] ?? result.error} → 보류</p>
+  }
+  return (
+    <p className="muted">
+      AI 모델 {result.model} · 판단: {SITE_LABEL[result.site_type ?? ''] ?? result.site_type}
+      {result.signals && result.signals.length > 0 && ` · 신호: ${result.signals.join(', ')}`}
+      {result.confidence != null && ` · 모델 자체 확신도 ${result.confidence.toFixed(2)} (보정 전, 악성일 확률 아님)`}
+    </p>
+  )
+}
+
 function VerdictView({ verdict }: { verdict: VerdictItem }) {
   const badge = verdictBadge(verdict.status)
   const signals = verdict.rule_result.signals ?? []
@@ -245,11 +284,12 @@ function VerdictView({ verdict }: { verdict: VerdictItem }) {
         시스템 판정 v{verdict.version} <span className={`badge ${badge}`}>{VERDICT_LABEL[verdict.status]}</span>
       </h3>
       <p className="muted">
-        규칙 {verdict.rule_result.version} · {POLICY_LABEL[verdict.policy_reason ?? ''] ?? verdict.policy_reason}
+        규칙 {verdict.rule_result.version} · {policyText(verdict.policy_reason)}
         {verdict.suspected_types.length > 0 &&
           ` · 의심 유형: ${verdict.suspected_types.map((t) => TYPE_LABEL[t] ?? t).join(', ')}`}
         {' '}— 기술적 평가이며 최종 결론은 담당자가 내립니다.
       </p>
+      {verdict.model_result && <ModelView result={verdict.model_result} />}
       {signals.length > 0 && (
         <table>
           <thead>
