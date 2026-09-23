@@ -15,8 +15,8 @@ RUN pip install -r requirements.txt && pip uninstall -y pip && rm -rf /root/.cac
 COPY worker ./worker
 
 # 이미지에 포함된 비root 계정.
-# Chromium 샌드박스는 seccomp 프로필이 필요하다(3주차). 그 전까지는 compose에서 CHROMIUM_SANDBOX=false로 실행하고
-# 컨테이너 격리(비root, cap_drop ALL, 읽기 전용, no-new-privileges, 네트워크 분리)에 의존한다.
+# Chromium 샌드박스를 켜려면 compose가 적용하는 seccomp 프로필(worker/seccomp/chromium.json)이 필요하다.
+# 컨테이너 격리(비root, cap_drop ALL, 읽기 전용, no-new-privileges, 네트워크 분리)와 함께 이중으로 가둔다.
 USER pwuser
 
 CMD ["python", "-m", "worker.main"]

@@ -30,6 +30,7 @@ PR 리뷰 때 해당 ID를 체크하고, 보안 이슈에는 같은 분류 라�
 | SC-SF-06 | 전송 구간 | 운영 배포 시 TLS 필수, 내부 네트워크 분리 | `compose.yaml` networks | 1·7 | 🟡 |
 | SC-SF-07 | Worker 내부 API | 서비스 토큰(32자 이상, `hmac.compare_digest`), `/internal` 경로는 nginx가 404 처리, Worker·backend만 연결된 `api` 네트워크 | `test_internal_api_requires_worker_token`, `test_internal_routes_not_under_public_api_prefix` | 2 | ✅ |
 | SC-SF-08 | 증거 무결성 | 저장 시 SHA-256·버전 기록, 조회할 때마다 해시 재대조 후 불일치면 내용 대신 409, 감사 로그 | `test_tampered_evidence_is_not_served` | 2 | ✅ |
+| SC-SF-09 | 조사 브라우저 권한 (샌드박스 탈출) | 비root·`cap_drop: ALL`·읽기 전용·no-new-privileges 컨테이너 + Chromium 자체 샌드박스. seccomp는 Docker 기본 프로필에 네임스페이스 샌드박스용 호출 4개만 추가(고정 커밋에서 생성) | `worker/tests/test_sandbox_config.py`, 컨테이너 안 렌더러 네임스페이스 분리 확인 | 3 | ✅ |
 
 ## 3. 시간 및 상태 (SC-TS)
 

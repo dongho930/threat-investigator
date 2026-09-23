@@ -33,8 +33,8 @@ class WorkerSettings:
     # 송신 프록시. 설정하면 브라우저의 모든 요청과 목적지 검사가 이 프록시를 거친다(컨테이너 배포에서는 필수).
     egress_proxy_url: str | None = field(default_factory=lambda: os.getenv("EGRESS_PROXY_URL") or None)
 
-    # Playwright 기본값은 샌드박스 꺼짐이므로 명시적으로 켠다. 컨테이너에서는 seccomp 프로필(3주차) 전까지
-    # user namespace를 만들 수 없어 compose에서만 CHROMIUM_SANDBOX=false로 둔다.
+    # Playwright 기본값은 샌드박스 꺼짐이므로 명시적으로 켠다. 컨테이너에서는 seccomp 프로필
+    # (worker/seccomp/chromium.json)이 있어야 user namespace를 만들 수 있다. CI 러너처럼 막힌 환경에서만 끈다.
     chromium_sandbox: bool = field(
         default_factory=lambda: os.getenv("CHROMIUM_SANDBOX", "true").strip().lower() not in ("0", "false", "no")
     )
