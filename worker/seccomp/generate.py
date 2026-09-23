@@ -37,7 +37,8 @@ def main() -> None:
     with urllib.request.urlopen(SOURCE, timeout=30) as res:  # noqa: S310 - 고정된 https URL
         default_profile = json.load(res)
     out = Path(__file__).with_name("chromium.json")
-    out.write_text(json.dumps(build(default_profile), indent=2) + "\n", encoding="utf-8")
+    # OS와 관계없이 같은 파일이 나오도록 줄바꿈을 LF로 고정한다.
+    out.write_text(json.dumps(build(default_profile), indent=2) + "\n", encoding="utf-8", newline="\n")
     print(f"wrote {out} from moby/profiles@{MOBY_COMMIT[:12]}")
 
 
