@@ -6,7 +6,8 @@
 #   data   : backend·relay ↔ PostgreSQL   (internal)  ← Worker는 DB에 접근할 수 없다
 #   jobs   : backend·relay·worker ↔ Redis (internal)
 #   api    : worker → backend 내부 API(/internal, 서비스 토큰) (internal)
-#   egress : worker ↔ 조사 대상(testsites, 인터넷). 3주차에 송신 방화벽·사설 IP 차단을 추가한다.
+#   sandbox: worker ↔ egress-proxy (internal)  ← Worker는 인터넷에 직접 닿지 않는다
+#   egress : egress-proxy ↔ 조사 대상(testsites, 인터넷). 프록시가 연결마다 목적지 IP를 검사한다.
 
 x-hardening: &hardening
   security_opt: ["no-new-privileges:true"]
@@ -96,17 +97,30 @@ services:
       API_BASE_URL: http://backend:8000
       WORKER_API_TOKEN: ${WORKER_API_TOKEN:?set WORKER_API_TOKEN in .env}
       URL_HOST_ALLOWLIST: '["testsites"]'
+      # 모든 브라우저 요청과 목적지 검사를 송신 프록시로 보낸다.
+      EGRESS_PROXY_URL: http://egress-proxy:3128
       # TODO(3주차): Chromium용 seccomp 프로필을 적용하고 true로 바꾼다.
       CHROMIUM_SANDBOX: "false"
     read_only: true
     tmpfs: ["/tmp", "/home/pwuser"]
     shm_size: 1gb
     init: true
-    # TODO(3주차): Chromium 샌드박스용 seccomp 프로필 적용, 송신 방화벽(사설·예약 IP 차단) 추가
+    # TODO(3주차): Chromium 샌드박스용 seccomp 프로필 적용
     depends_on:
       redis: { condition: service_healthy }
       backend: { condition: service_started }
-    networks: [jobs, api, egress]
+      egress-proxy: { condition: service_started }
+    networks: [jobs, api, sandbox]
+
+  egress-proxy:
+    build: ./egress-proxy
+    <<: *hardening
+    read_only: true
+    environment:
+      # 개발용 시험 페이지만 사설 주소여도 허용한다. 운영에서는 비워 둔다.
+      EGRESS_HOST_ALLOWLIST: '["testsites"]'
+    # 포트를 공개하지 않는다. sandbox 네트워크의 Worker만 접근한다.
+    networks: [sandbox, egress]
 
   frontend:
     build: ./frontend
@@ -134,6 +148,7 @@ networks:
   data: { internal: true }
   jobs: { internal: true }
   api: { internal: true }
+  sandbox: { internal: true }
   egress: {}
 
 volumes:

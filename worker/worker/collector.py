@@ -3,8 +3,8 @@
 지키는 것:
 - 모든 요청을 route로 가로채 UrlGuard 검사(스킴·호스트·포트·DNS 결과 IP)를 통과한 것만 보낸다.
 - 리다이렉트 체인은 브라우저에 맡기지 않고 한 단계씩 직접 따라가며 단계마다 검사한다.
-  (Playwright route는 리다이렉트의 다음 단계를 가로채지 못한다. 하위 자원의 리다이렉트는 기록만 하고,
-  3주차 송신 프록시에서 네트워크 수준으로 막는다.)
+  (Playwright route는 리다이렉트의 다음 단계를 가로채지 못한다. 그런 하위 자원 리다이렉트는 송신 프록시가
+  실제 연결 시점에 막고, 여기서는 사후 검사 결과를 기록한다.)
 - 다운로드·Service Worker·새 창 차단, 시간·요청 수·리다이렉트 횟수·텍스트 길이 제한.
 - 쿠키·요청 헤더·폼 입력값은 수집하지 않는다. 폼은 구조(입력 종류·이름)만 기록한다.
 - 페이지에서 얻은 값은 모두 신뢰하지 않는 데이터로 보고 타입·길이를 다시 검사한다.
@@ -88,7 +88,7 @@ class NetworkState:
     resource_types: Counter = field(default_factory=Counter)
     main_frame: Any = None
     main_document_blocked: str | None = None
-    unguarded_redirects: list[dict[str, Any]] = field(default_factory=list)
+    subresource_redirects: list[dict[str, Any]] = field(default_factory=list)
     popups_blocked: int = 0
     navigations: list[str] = field(default_factory=list)
 
@@ -182,7 +182,12 @@ class Collector:
 
     def __call__(self, url: str) -> Artifacts:
         with sync_playwright() as p:
-            with closing(p.chromium.launch(headless=True, chromium_sandbox=self.settings.chromium_sandbox)) as browser:
+            launch_opts: dict[str, Any] = {"headless": True, "chromium_sandbox": self.settings.chromium_sandbox}
+            if self.settings.egress_proxy_url:
+                # 브라우저·APIRequestContext의 모든 연결을 송신 프록시로 보낸다.
+                # Chromium은 localhost를 프록시 없이 연결하므로 "<-loopback>"으로 그 예외도 없앤다.
+                launch_opts["proxy"] = {"server": self.settings.egress_proxy_url, "bypass": "<-loopback>"}
+            with closing(p.chromium.launch(**launch_opts)) as browser:
                 width, height = self.settings.viewport
                 context = browser.new_context(
                     accept_downloads=False,
@@ -269,15 +274,15 @@ class Collector:
         return None
 
     def _on_request(self, req: Any, guard: CachingGuard, net: NetworkState) -> None:
-        # route가 가로채지 못하는 하위 자원 리다이렉트를 사후에 검사해 기록한다.
-        if req.redirected_from is None or len(net.unguarded_redirects) >= 20:
+        # route가 가로채지 못하는 하위 자원 리다이렉트를 기록한다. 실제 차단은 송신 프록시가 연결 시점에 한다.
+        if req.redirected_from is None or len(net.subresource_redirects) >= 20:
             return
         try:
             guard.check(req.url)
             verdict = None
         except Blocked as exc:
             verdict = exc.reason
-        net.unguarded_redirects.append({"url": req.url[:_MAX_URL], "violation": verdict})
+        net.subresource_redirects.append({"url": req.url[:_MAX_URL], "violation": verdict})
 
     def _on_navigated(self, frame: Any, page: Page, net: NetworkState) -> None:
         if frame == page.main_frame and len(net.navigations) < 20:
@@ -352,12 +357,12 @@ class Collector:
     @staticmethod
     def _network_summary(net: NetworkState) -> dict[str, Any]:
         return {
-            "schema": "network_summary/1",
+            "schema": "network_summary/2",
             "requests": net.requests,
             "blocked": dict(net.blocked),
             "hosts": dict(net.hosts),
             "resource_types": dict(net.resource_types),
             "popups_blocked": net.popups_blocked,
             "navigations": net.navigations,
-            "unguarded_redirects": net.unguarded_redirects,
+            "subresource_redirects": net.subresource_redirects,
         }

@@ -129,7 +129,7 @@ def test_popup_closed(site: str, collect: Collector) -> None:
 
 def test_subresource_redirect_violation_recorded(site: str, collect: Collector) -> None:
     a = collect(f"{site}/sub-redirect")
-    violations = [r["violation"] for r in a.network_summary["unguarded_redirects"]]
+    violations = [r["violation"] for r in a.network_summary["subresource_redirects"]]
     assert violations == ["ip_not_allowed"]
 
 

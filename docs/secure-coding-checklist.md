@@ -12,7 +12,7 @@ PR 리뷰 때 해당 ID를 체크하고, 보안 이슈에는 같은 분류 라�
 |---|---|---|---|---|---|
 | SC-IN-01 | 수집한 페이지 제목·텍스트가 콘솔에 표시됨 (저장형 XSS) | React 기본 이스케이프, `dangerouslySetInnerHTML`·`innerHTML` 금지(ESLint), nginx 엄격한 CSP, 의심 URL·수집 URL을 링크로 만들지 않음(사건 상세 화면 포함), 증거 응답 Content-Type 고정 + nosniff | `frontend/eslint.config.js`, `testsites/html/xss-title.html`(2주차 E2E에서 텍스트로만 표시·대화상자 0건 확인) | 1·2·4 | 🟡 |
 | SC-IN-02 | 검색·필터 조건 (SQL 삽입) | SQLAlchemy ORM·바인딩만 사용, 원시 SQL 금지 | Semgrep `p/python` | 1 | ✅ |
-| SC-IN-03 | 조사 요청 URL (SSRF) | 등록 시 스킴·호스트·IP·포트 검사. Worker: 리다이렉트를 한 단계씩 직접 따라가며 단계마다 검사, 모든 브라우저 요청을 route로 가로채 DNS 결과 IP까지 검사. 하위 자원 리다이렉트는 기록만 함 → 3주차 송신 프록시에서 연결 IP 재검사 | `backend/tests/test_url_policy.py`, `worker/tests/test_url_guard.py`, `worker/tests/test_collector_browser.py`, `testsites /ssrf-*` | 1·2·3 | 🟡 |
+| SC-IN-03 | 조사 요청 URL (SSRF) | 등록 시 스킴·호스트·IP·포트 검사. Worker: 리다이렉트를 한 단계씩 직접 따라가며 단계마다 검사, 모든 브라우저 요청을 route로 검사. **송신 프록시**: Worker는 인터넷에 직접 닿지 않고(`sandbox` 내부망), 모든 연결이 프록시에서 목적지 IP 검사를 받는다 — route가 못 막는 하위 자원 리다이렉트도 연결 시점에 차단 | `backend/tests/test_url_policy.py`, `worker/tests/test_url_guard.py`, `worker/tests/test_collector_browser.py`, `egress-proxy/tests/`, `testsites /ssrf-*`, `/sub-redirect.html` | 1·2·3 | ✅ |
 | SC-IN-04 | 증거 파일명 (경로 조작) | 저장소 키는 서버가 생성한 `<case_id>/<uuid>.<ext>`만 사용, 읽을 때 키 형식·루트 이탈 재검사, 덮어쓰기 금지(`xb`) | `backend/tests/test_evidence_store.py`, `test_storage_key_is_server_generated` | 2 | ✅ |
 | SC-IN-07 | Worker가 올리는 증거 파일 | 종류별 Content-Type·PNG 시그니처·JSON 객체 검사, 크기 제한(스트리밍 중 차단), 수집기 버전 헤더 형식 제한 | `test_invalid_evidence_rejected`, `test_oversized_evidence_rejected` | 2 | ✅ |
 | SC-IN-05 | URL·페이지 문구의 개행 (로그 삽입) | `safe_log_value`로 제어문자 제거·길이 제한 | `backend/tests/test_logging_and_outbox.py` | 1 | ✅ |
@@ -69,7 +69,7 @@ PR 리뷰 때 해당 ID를 체크하고, 보안 이슈에는 같은 분류 라�
 
 | ID | 위험 지점 | 대책 | 시험 | 주차 | 상태 |
 |---|---|---|---|---|---|
-| SC-AP-01 | DNS 결과만 믿는 접근 검사 (DNS 리바인딩) | 조회된 주소가 하나라도 내부면 거부(2주차). 실제 연결 시점 IP 재확인은 3주차 송신 프록시 | `worker/tests/test_url_guard.py` (`mixed`, `mapped`) | 2·3 | 🟡 |
+| SC-AP-01 | DNS 결과만 믿는 접근 검사 (DNS 리바인딩) | 송신 프록시가 연결마다 DNS를 **한 번만** 조회해 검사하고, 검사한 IP로 직접 연결(호스트 이름을 다시 넘기지 않음). 조회된 주소가 하나라도 내부면 거부 | `egress-proxy/tests/test_server.py::test_connects_to_checked_ip_and_resolves_once`, `egress-proxy/tests/test_policy.py` (`mixed`, `mapped`) | 2·3 | ✅ |
 | SC-AP-02 | 외부 위협정보 API | 타임아웃·재시도 상한·호출 한도, 조회 전용 기본값 | — | 5 | ⬜ |
 | SC-AP-03 | 취약한 라이브러리 | 버전 고정, pip-audit·npm audit·Trivy | `.github/workflows/security.yml` | 1 | ✅ |
 

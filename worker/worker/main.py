@@ -9,7 +9,7 @@ from worker.collector import Collector
 from worker.config import WorkerSettings
 from worker.consumer import Consumer, ConsumerConfig
 from worker.investigate import Investigator
-from worker.url_guard import UrlGuard
+from worker.url_guard import ProxyCheck, UrlGuard
 
 
 def main() -> None:
@@ -21,7 +21,12 @@ def main() -> None:
         timeout_s=settings.api_timeout_s,
         collector_version=settings.collector_version,
     )
-    guard = UrlGuard(host_allowlist=settings.host_allowlist, allowed_ports=settings.allowed_ports)
+    # 프록시를 쓰면 목적지 판단(DNS·IP)은 프록시에 묻는다. Worker는 인터넷 DNS에 닿지 않는다.
+    remote_check = ProxyCheck(settings.egress_proxy_url) if settings.egress_proxy_url else None
+    guard = UrlGuard(
+        host_allowlist=settings.host_allowlist, allowed_ports=settings.allowed_ports, remote_check=remote_check
+    )
+    logging.getLogger(__name__).info("egress proxy=%s", "on" if remote_check else "off (local DNS check)")
     handler = Investigator(api, Collector(settings, guard))
 
     consumer_cfg = ConsumerConfig()
