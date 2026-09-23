@@ -15,7 +15,7 @@ COPY alembic ./alembic
 COPY app ./app
 
 # 비root 계정으로 실행
-RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin appuser
+RUN useradd --uid 10001 --no-create-home --shell /usr/sbin/nologin appuser     && mkdir -p /data/evidence && chown 10001:10001 /data/evidence && chmod 700 /data/evidence
 USER 10001
 
 EXPOSE 8000

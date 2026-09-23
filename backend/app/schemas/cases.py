@@ -23,6 +23,7 @@ class CaseOut(BaseModel):
     host: str
     source: CaseSource
     status: CaseStatus
+    status_reason: str | None = None
     note: str | None
     created_at: datetime
 

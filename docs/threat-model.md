@@ -31,6 +31,15 @@
 | web | frontend, backend | 불가 (internal) |
 | data | backend, outbox-relay, migrate, db | 불가 (internal) |
 | jobs | backend, outbox-relay, worker, redis | 불가 (internal) |
+| api | backend, worker | 불가 (internal). Worker → `/internal/v1` 전용, 서비스 토큰 인증 |
 | egress | worker, testsites | 가능. 3주차에 사설·예약 IP 송신 차단 추가 |
 
-Worker는 `data` 네트워크에 연결되지 않으므로 DB에 직접 접근할 수 없다.
+Worker는 `data` 네트워크에 연결되지 않으므로 DB에 직접 접근할 수 없다. 증거 파일 볼륨(`evidence`)도 backend에만 연결된다.
+
+## 알려진 한계 (2주차 기준)
+
+| 한계 | 영향 | 해결 계획 |
+|---|---|---|
+| Playwright route는 HTTP 리다이렉트의 다음 단계를 가로채지 못함 | 하위 자원(이미지·스크립트) 리다이렉트가 내부 주소로 향하면 요청이 나갈 수 있음. 현재는 `network_summary.unguarded_redirects`에 기록만 함. 주 문서 리다이렉트는 직접 추적하므로 해당 없음 | 3주차: 송신 프록시가 모든 연결의 실제 IP를 검사 |
+| DNS 조회와 연결 사이의 주소 변경(리바인딩) | 검사 통과 후 내부 주소로 연결될 수 있음 | 3주차: 프록시가 검사한 IP로 직접 연결 |
+| 컨테이너 안에서 Chromium 샌드박스 꺼짐 | 렌더러 취약점 악용 시 컨테이너 권한까지 도달 (비root, cap_drop ALL, 읽기 전용, 네트워크 분리로 완화) | 3주차: seccomp 프로필 적용 후 `CHROMIUM_SANDBOX=true` |

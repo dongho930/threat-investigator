@@ -118,6 +118,8 @@ class Case(Base):
     source_ref: Mapped[str | None] = mapped_column(String(200))
     note: Mapped[str | None] = mapped_column(String(500))
     status: Mapped[CaseStatus] = mapped_column(_enum(CaseStatus, "case_status"), default=CaseStatus.QUEUED)
+    # 실패·보류 사유 코드 (정해진 코드만 저장한다. 외부 오류 메시지 원문은 저장하지 않는다)
+    status_reason: Mapped[str | None] = mapped_column(String(64))
     created_by: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
@@ -137,6 +139,7 @@ class Evidence(Base):
     # 저장소 키는 서버가 생성한 UUID 기반 경로만 사용한다(경로 조작 방지).
     storage_key: Mapped[str] = mapped_column(String(200))
     sha256: Mapped[str] = mapped_column(String(64))
+    size_bytes: Mapped[int] = mapped_column(Integer)
     collector_version: Mapped[str] = mapped_column(String(50))
     collected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     retention_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
