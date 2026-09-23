@@ -8,7 +8,9 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+# 런타임에는 pip가 필요 없다. pip 내부 라이브러리(msgpack 등)의 취약점이 이미지에 남지 않도록 설치 후 제거하고,
+# 베이스 이미지가 남긴 virtualenv 휠 캐시(구버전 pip·setuptools)도 지운다.
+RUN pip install -r requirements.txt && pip uninstall -y pip && rm -rf /root/.cache
 
 COPY worker ./worker
 
