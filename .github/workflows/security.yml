@@ -57,6 +57,10 @@ jobs:
   secrets:
     name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
+    # PR 이벤트에서 gitleaks-action은 PR의 커밋 목록을 API로 읽는다. 이 job에만 읽기 권한을 준다.
+    permissions:
+      contents: read
+      pull-requests: read
     steps:
       - uses: actions/checkout@v4
         with:
