@@ -104,7 +104,7 @@ export interface NetworkSummary {
   hosts: Record<string, number>
   popups_blocked: number
   navigations: string[]
-  unguarded_redirects: { url: string; violation: string | null }[]
+  subresource_redirects: { url: string; violation: string | null }[]
 }
 
 function evidencePath(caseId: string, evidenceId?: string): string {

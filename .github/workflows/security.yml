@@ -23,6 +23,7 @@ jobs:
       - run: pip install bandit==1.9.4
       - run: bandit -c backend/pyproject.toml -r backend/app -ll
       - run: bandit -c worker/pyproject.toml -r worker/worker -ll
+      - run: bandit -c egress-proxy/pyproject.toml -r egress-proxy/egress_proxy -ll
 
   sast-semgrep:
     name: SAST (Semgrep)
@@ -74,7 +75,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        service: [backend, worker, frontend]
+        service: [backend, worker, frontend, egress-proxy]
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t ti-${{ matrix.service }}:ci ./${{ matrix.service }}

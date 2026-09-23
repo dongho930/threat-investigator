@@ -39,5 +39,6 @@
 ```bash
 cd backend && ruff check . && ruff format --check . && pytest
 cd worker  && ruff check . && ruff format --check . && pytest
+cd egress-proxy && ruff check . && ruff format --check . && pytest
 cd frontend && npm run lint && npm run build
 ```

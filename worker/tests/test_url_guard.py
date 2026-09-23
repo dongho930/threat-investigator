@@ -1,8 +1,11 @@
 import ipaddress
+import json
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
 
-from worker.url_guard import Blocked, UrlGuard, is_ip_allowed
+from worker.url_guard import Blocked, ProxyCheck, UrlGuard, is_ip_allowed
 
 
 def resolver_for(mapping: dict[str, list[str]]):
@@ -75,3 +78,66 @@ def test_blocked(url: str, reason: str) -> None:
 )
 def test_internal_ips_not_allowed(ip: str) -> None:
     assert not is_ip_allowed(ipaddress.ip_address(ip))
+
+
+# ── 송신 프록시 조회(ProxyCheck) ──
+
+
+def _fake_proxy(responder):
+    class H(BaseHTTPRequestHandler):
+        def do_GET(self) -> None:  # noqa: N802
+            status, body = responder(self.path)
+            self.send_response(status)
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *a: object) -> None:
+            pass
+
+    srv = ThreadingHTTPServer(("127.0.0.1", 0), H)
+    threading.Thread(target=srv.serve_forever, daemon=True).start()
+    return srv, f"http://127.0.0.1:{srv.server_address[1]}"
+
+
+def test_proxy_check_uses_proxy_decision() -> None:
+    seen: list[str] = []
+
+    def responder(path: str):
+        seen.append(path)
+        allowed = "host=public.example.com" in path
+        return 200, json.dumps({"allowed": allowed, "reason": None if allowed else "resolved_ip_not_allowed"}).encode()
+
+    srv, url = _fake_proxy(responder)
+    guard = UrlGuard(remote_check=ProxyCheck(url), resolver=lambda h, p: pytest.fail("local DNS must not be used"))
+    guard.check("https://public.example.com/login")
+    with pytest.raises(Blocked) as exc:
+        guard.check("http://rebind.example.com/")
+    assert exc.value.reason == "resolved_ip_not_allowed"
+    assert seen[0].startswith("/__check?host=public.example.com&port=443")
+    srv.shutdown()
+
+
+@pytest.mark.parametrize(
+    ("status", "body", "reason"),
+    [
+        (200, b"not json", "egress_check_failed"),
+        (500, b"", "egress_check_failed"),
+        (200, json.dumps({"allowed": "yes"}).encode(), "egress_blocked"),
+        (200, json.dumps({"allowed": False, "reason": "bad reason\r\ninjected"}).encode(), "egress_blocked"),
+        (200, json.dumps([1, 2]).encode(), "egress_blocked"),
+    ],
+)
+def test_proxy_check_fails_closed(status: int, body: bytes, reason: str) -> None:
+    srv, url = _fake_proxy(lambda path: (status, body))
+    assert ProxyCheck(url)("x.example.com", 80) == reason
+    srv.shutdown()
+
+
+def test_proxy_check_unreachable_is_blocked() -> None:
+    assert ProxyCheck("http://127.0.0.1:9", timeout_s=1)("x.example.com", 80) == "egress_check_failed"
+
+
+@pytest.mark.parametrize("bad", ["https://proxy:3128", "file:///etc", "proxy:3128"])
+def test_proxy_check_requires_http_url(bad: str) -> None:
+    with pytest.raises(ValueError):
+        ProxyCheck(bad)
