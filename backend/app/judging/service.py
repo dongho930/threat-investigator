@@ -11,6 +11,7 @@ import hmac
 import json
 import logging
 import uuid
+from dataclasses import dataclass
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -51,19 +52,43 @@ def _load_json(store: LocalEvidenceStore, evidence: Evidence | None) -> dict | N
     return parsed if isinstance(parsed, dict) else None
 
 
-def judge_case(db: Session, store: LocalEvidenceStore, case: Case, job_id: uuid.UUID, *, collected: bool) -> Verdict:
+@dataclass
+class JobEvidence:
+    dom: dict | None
+    chain: dict | None
+    hashes: dict[str, str]
+
+
+def load_job_evidence(db: Session, store: LocalEvidenceStore, case_id: uuid.UUID, job_id: uuid.UUID) -> JobEvidence:
+    """해당 작업이 올린 증거만 읽는다. 읽을 때 SHA-256을 다시 대조하고, 어긋나면 없는 것으로 본다."""
     evidence = {
         e.kind: e
-        for e in db.scalars(select(Evidence).where(Evidence.case_id == case.id, Evidence.job_id == job_id)).all()
+        for e in db.scalars(select(Evidence).where(Evidence.case_id == case_id, Evidence.job_id == job_id)).all()
     }
-    dom = _load_json(store, evidence.get(EvidenceKind.DOM_SUMMARY))
-    chain = _load_json(store, evidence.get(EvidenceKind.REDIRECT_CHAIN))
-    result = rules.evaluate(dom, chain, collected)
+    return JobEvidence(
+        dom=_load_json(store, evidence.get(EvidenceKind.DOM_SUMMARY)),
+        chain=_load_json(store, evidence.get(EvidenceKind.REDIRECT_CHAIN)),
+        hashes={k.value: e.sha256 for k, e in evidence.items()},
+    )
 
-    version = (db.scalar(select(func.max(Verdict.version)).where(Verdict.case_id == case.id)) or 0) + 1
+
+def rule_result_dict(ev: JobEvidence, job_id: uuid.UUID, *, collected: bool) -> tuple[rules.RuleResult, dict]:
+    result = rules.evaluate(ev.dom, ev.chain, collected)
     rule_result = result.as_dict()
     rule_result["job_id"] = str(job_id)
-    rule_result["evidence"] = {k.value: e.sha256 for k, e in evidence.items()}
+    rule_result["evidence"] = ev.hashes
+    return result, rule_result
+
+
+def next_version(db: Session, case_id: uuid.UUID) -> int:
+    return (db.scalar(select(func.max(Verdict.version)).where(Verdict.case_id == case_id)) or 0) + 1
+
+
+def judge_case(db: Session, store: LocalEvidenceStore, case: Case, job_id: uuid.UUID, *, collected: bool) -> Verdict:
+    """규칙 판정(기준선). AI 판정을 켜면 사건은 judging 상태로 남고 ai-judge가 모델 판단을 더한 새 버전을 쌓는다."""
+    ev = load_job_evidence(db, store, case.id, job_id)
+    result, rule_result = rule_result_dict(ev, job_id, collected=collected)
+    version = next_version(db, case.id)
     verdict = Verdict(
         id=uuid.uuid4(),
         case_id=case.id,

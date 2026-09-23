@@ -1,0 +1,12 @@
+# torch is installed separately from the CPU wheel index (see Dockerfile)
+laya==0.3.11
+transformers==5.17.0
+tokenizers==0.23.2
+safetensors==0.8.0
+huggingface_hub==1.32.0
+numpy==2.5.3
+fastapi==0.141.1
+uvicorn==0.53.0
+pydantic==2.13.5
+# torch pulls an old setuptools; pin a fixed one (Trivy: CVE-2025-47273 etc.)
+setuptools==84.0.0

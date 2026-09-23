@@ -105,10 +105,10 @@ def test_complete_is_idempotent_for_same_job(client: TestClient) -> None:
 def test_sweeper_leaves_fresh_and_pending_cases_alone(client: TestClient) -> None:
     case_id = _new_case(client)
     # 발행 대기 중인 이벤트가 있으면(relay가 늦는 경우) 오래됐어도 건드리지 않는다.
-    assert _sweep(client, after_s=10_000) == {"requeued": 0, "exhausted": 0}
+    assert _sweep(client, after_s=10_000) == {"requeued": 0, "exhausted": 0, "ai_fallback": 0}
     _publish_all(client)
     # 발행은 됐지만 아직 오래되지 않은 대기 사건도 그대로 둔다.
-    assert _sweep(client, after_s=10) == {"requeued": 0, "exhausted": 0}
+    assert _sweep(client, after_s=10) == {"requeued": 0, "exhausted": 0, "ai_fallback": 0}
     assert _case(client, case_id).status is CaseStatus.QUEUED
 
 
@@ -116,7 +116,11 @@ def test_sweeper_requeues_stale_queued_case_with_new_job(client: TestClient) -> 
     case_id = _new_case(client)
     old_job = _job(client, case_id)
     _publish_all(client)
-    assert _sweep(client, after_s=get_settings().queued_stale_seconds + 1) == {"requeued": 1, "exhausted": 0}
+    assert _sweep(client, after_s=get_settings().queued_stale_seconds + 1) == {
+        "requeued": 1,
+        "exhausted": 0,
+        "ai_fallback": 0,
+    }
     case = _case(client, case_id)
     assert case.status is CaseStatus.QUEUED and case.attempts == 2 and str(case.current_job_id) != old_job
     with client.app.state.session_factory() as db:
@@ -140,8 +144,8 @@ def test_sweeper_requeues_expired_lease_and_new_job_gets_next_version(client: Te
     assert _put(client, case_id, job1).json()["version"] == 1
     _publish_all(client)
     lease_s = get_settings().investigation_lease_seconds
-    assert _sweep(client, after_s=lease_s - 60) == {"requeued": 0, "exhausted": 0}
-    assert _sweep(client, after_s=lease_s + 1) == {"requeued": 1, "exhausted": 0}
+    assert _sweep(client, after_s=lease_s - 60) == {"requeued": 0, "exhausted": 0, "ai_fallback": 0}
+    assert _sweep(client, after_s=lease_s + 1) == {"requeued": 1, "exhausted": 0, "ai_fallback": 0}
     job2 = _job(client, case_id)
     assert _claim(client, case_id, job2).status_code == 200
     assert _put(client, case_id, job2).json()["version"] == 2
@@ -157,7 +161,7 @@ def test_sweeper_fails_case_after_max_attempts(client: TestClient) -> None:
         assert _sweep(client, after_s=stale)["requeued"] == 1
         stale += get_settings().queued_stale_seconds + 1
     _publish_all(client)
-    assert _sweep(client, after_s=stale) == {"requeued": 0, "exhausted": 1}
+    assert _sweep(client, after_s=stale) == {"requeued": 0, "exhausted": 1, "ai_fallback": 0}
     case = _case(client, case_id)
     # 실패를 안전으로 두지 않는다: BENIGN이 아니라 failed + 사유
     assert case.status is CaseStatus.FAILED and case.status_reason == "retry_exhausted"
