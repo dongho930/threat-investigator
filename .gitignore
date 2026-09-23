@@ -1,0 +1,28 @@
+# 비밀정보
+.env
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+*.db
+
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+
+# 증거 파일 (저장소에 올리지 않는다)
+evidence/
+screenshots/
+
+# 기타
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

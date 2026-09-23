@@ -1,0 +1,23 @@
+[project]
+name = "threat-investigator-backend"
+version = "0.1.0"
+requires-python = ">=3.13"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 120
+target-version = "py313"
+
+[tool.ruff.lint]
+# E/F: 기본 오류, B: 버그 패턴, S: 보안(bandit 규칙), UP: 최신 문법, I: import 정렬
+select = ["E", "F", "B", "S", "UP", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S101", "S105", "S106"]
+"alembic/*" = ["E501"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "alembic"]

