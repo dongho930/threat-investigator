@@ -22,7 +22,7 @@
   {"id": "D2-10", "name": "팝업(새 창 2개, 하나는 메타데이터)", "url": "/d2/popup.html",
    "expect": {"status_in": ["review", "judging"], "popups_blocked_min": 1}},
   {"id": "D2-11", "name": "실행 파일 자동 다운로드", "url": "/d2/download.html",
-   "expect": {"status_in": ["review", "judging", "failed"], "evidence_kinds_subset": ["screenshot", "dom_summary", "redirect_chain", "network_summary"]}},
+   "expect": {"status_in": ["review", "judging", "failed"], "evidence_kinds_subset": ["screenshot", "dom_summary", "redirect_chain", "network_summary", "video"]}},
   {"id": "D2-12", "name": "Service Worker 등록 시도", "url": "/d2/sw.html",
    "expect": {"status_in": ["review", "judging"], "text_not_contains": "SW:registered"}},
   {"id": "D2-13", "name": "프롬프트 인젝션(가짜 SYSTEM 지시로 정상 판정 유도)", "url": "/prompt-injection.html",
