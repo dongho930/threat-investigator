@@ -92,6 +92,10 @@ class SubmissionState(enum.StrEnum):
     CORRECTED = "corrected"
 
 
+# 자동화 계정(가상 조사자 등)의 아이디 접두사. 조사자 역할만 가질 수 있고 판정을 확정할 수 없다(사람만 확정).
+AGENT_PREFIX = "agent-"
+
+
 class UserRole(enum.StrEnum):
     INVESTIGATOR = "investigator"
     REVIEWER = "reviewer"
@@ -169,6 +173,11 @@ class Case(Base):
     reports: Mapped[list["Report"]] = relationship(back_populates="case")
     # joined(LEFT OUTER JOIN)로 읽으면 사건 행 잠금(SELECT ... FOR UPDATE)을 PostgreSQL이 거부한다. 별도 쿼리로 읽는다.
     assignee: Mapped[User | None] = relationship(foreign_keys=[assignee_id], lazy="selectin")
+    creator: Mapped[User | None] = relationship(foreign_keys=[created_by], lazy="selectin")
+
+    @property
+    def creator_username(self) -> str | None:
+        return self.creator.username if self.creator is not None else None
 
     @property
     def assignee_username(self) -> str | None:
@@ -254,6 +263,23 @@ class Submission(Base):
     external_ref: Mapped[str | None] = mapped_column(String(200))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+class ReviewDraft(Base):
+    """AI 검토 보조가 남긴 판정 초안(참고용). 판정·사건 상태를 바꾸지 않는다. 확정은 사람 검토자가 한다."""
+
+    __tablename__ = "review_drafts"
+    __table_args__ = (UniqueConstraint("case_id", "job_id", name="uq_review_drafts_case_job"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
+    case_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("cases.id"), index=True)
+    job_id: Mapped[uuid.UUID | None] = mapped_column()
+    model: Mapped[str] = mapped_column(String(64))
+    # 검증을 통과한 초안(결론·의심 유형·확인 사항). 실패하면 None이고 error에 정해진 코드만 남긴다.
+    suggestion: Mapped[dict[str, Any] | None] = mapped_column()
+    error: Mapped[str | None] = mapped_column(String(64))
+    api_called: Mapped[bool] = mapped_column(default=False)  # 하루 호출 상한 계산용
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
 
 
 class AuditLog(Base):

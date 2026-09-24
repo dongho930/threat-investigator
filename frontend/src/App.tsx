@@ -158,6 +158,7 @@ function Console({ me, onLogout }: { me: Me; onLogout: () => void }) {
               <th>출처</th>
               <th>URL</th>
               <th>메모</th>
+              <th>등록</th>
               <th>담당</th>
               <th>등록 시각</th>
             </tr>
@@ -165,7 +166,7 @@ function Console({ me, onLogout }: { me: Me; onLogout: () => void }) {
           <tbody>
             {cases.length === 0 && (
               <tr>
-                <td colSpan={6} className="muted">
+                <td colSpan={7} className="muted">
                   등록된 사건이 없습니다.
                 </td>
               </tr>
@@ -188,6 +189,15 @@ function Console({ me, onLogout }: { me: Me; onLogout: () => void }) {
                 {/* 의심 URL은 링크로 만들지 않는다: 담당자가 실수로 클릭해 직접 접속하는 것을 막는다. */}
                 <td className="url">{c.url}</td>
                 <td>{c.note ?? ''}</td>
+                <td className="nowrap">
+                  {c.creator?.startsWith('agent-') ? (
+                    <span className="badge" title="자동화 계정(가상 조사자)">
+                      자동 · {c.creator}
+                    </span>
+                  ) : (
+                    (c.creator ?? (c.source === 'feed' ? '피드' : ''))
+                  )}
+                </td>
                 <td className="nowrap">{c.assignee ?? ''}</td>
                 <td className="nowrap">{formatTime(c.created_at)}</td>
               </tr>

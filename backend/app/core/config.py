@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     ai_judge_stale_seconds: int = 600
     ai_poll_seconds: float = 2.0
 
+    # AI 검토 보조(ai-reviewer). 기본 꺼짐. 켜면 검토 필요 사건의 판정 초안을 Claude가 남긴다(확정은 사람).
+    ai_review_enabled: bool = False
+    anthropic_api_key: SecretStr | None = None
+    ai_review_model: str = "claude-opus-5"
+    ai_review_max_per_day: int = Field(default=50, ge=0, le=10_000)  # 비용 한도
+    ai_review_poll_seconds: float = 10.0
+
     # 조사 작업 임대·재발행(스위퍼)
     investigation_lease_seconds: int = 600
     queued_stale_seconds: int = 600
@@ -73,6 +80,13 @@ class Settings(BaseSettings):
     def _worker_token_strength(self) -> "Settings":
         if self.worker_api_token is not None and len(self.worker_api_token.get_secret_value()) < 32:
             raise ValueError("WORKER_API_TOKEN은 32자 이상이어야 합니다.")
+        return self
+
+    @model_validator(mode="after")
+    def _empty_key_is_no_key(self) -> "Settings":
+        # compose는 키가 없으면 빈 문자열을 넘긴다. 빈 키는 키가 없는 것으로 본다(AI 검토 보조 꺼짐 유지).
+        if self.anthropic_api_key is not None and not self.anthropic_api_key.get_secret_value().strip():
+            self.anthropic_api_key = None
         return self
 
     @model_validator(mode="after")

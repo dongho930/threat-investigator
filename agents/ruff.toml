@@ -1,0 +1,5 @@
+# 자동화 도구용. backend와 같은 규칙에, 시험 데이터용 난수만 예외로 둔다.
+extend = "../backend/pyproject.toml"
+
+[lint.per-file-ignores]
+"virtual_investigator.py" = ["S311", "E402"]

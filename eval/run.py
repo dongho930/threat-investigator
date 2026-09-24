@@ -42,8 +42,11 @@ class Console:
 
     def _call(self, method: str, path: str, body: dict | None = None) -> tuple[int, object, Any]:
         data = json.dumps(body).encode() if body is not None else None
+        return self._call_raw(method, path, data, "application/json")
+
+    def _call_raw(self, method: str, path: str, data: bytes | None, content_type: str) -> tuple[int, object, Any]:
         req = urllib.request.Request(BASE + path, data=data, method=method)  # noqa: S310
-        req.add_header("Content-Type", "application/json")
+        req.add_header("Content-Type", content_type)
         if self.cookie:
             req.add_header("Cookie", self.cookie)
         if self.csrf and method != "GET":

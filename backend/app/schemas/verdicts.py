@@ -23,5 +23,16 @@ class VerdictOut(BaseModel):
     created_at: datetime
 
 
+class ReviewDraftOut(BaseModel):
+    """AI 검토 보조 초안(참고용). 판정이 아니다."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    model: str
+    suggestion: dict[str, Any] | None
+    error: str | None
+    created_at: datetime
+
+
 class VerdictList(BaseModel):
     items: list[VerdictOut]

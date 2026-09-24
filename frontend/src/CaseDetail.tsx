@@ -6,6 +6,7 @@ import {
   ApiError,
   assignCase,
   can,
+  fetchReviewDraft,
   getEvidenceJson,
   listInvestigators,
   listEvidence,
@@ -19,6 +20,7 @@ import {
   type EvidenceItem,
   type Me,
   type NetworkSummary,
+  type ReviewDraft,
   type RedirectHop,
   type ReportItem,
   type UserBrief,
@@ -125,6 +127,59 @@ function HumanVerdictView({ verdict }: { verdict: VerdictItem }) {
 
 const REVIEW_TYPES = ['PHISHING', 'SCAM', 'ILLEGAL_GAMBLING_SUSPECTED', 'MALWARE', 'OTHER']
 
+const DRAFT_ERROR_LABEL: Record<string, string> = {
+  prompt_injection_suspected: '페이지에 AI 조작 시도 문구가 있어 외부 AI에 보내지 않음',
+  refusal: 'AI가 답하지 않음',
+  schema_violation: 'AI 응답 형식 오류',
+  unreachable: 'AI 서비스 연결 실패',
+  auth_failed: 'API 키 오류',
+  rate_limited: '호출 한도 초과',
+}
+
+// AI 검토 보조 초안(참고용). 모델이 쓴 짧은 문장은 텍스트로만 표시하고, 확정은 검토자가 직접 한다.
+function DraftView({ caseId }: { caseId: string }) {
+  const [draft, setDraft] = useState<ReviewDraft | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    fetchReviewDraft(caseId)
+      .then((d) => {
+        if (!cancelled) setDraft(d)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [caseId])
+  if (!draft) return null
+  return (
+    <div className="draft">
+      <p>
+        <strong>AI 검토 보조 초안</strong> <span className="badge">참고용 · 확정은 검토자</span>{' '}
+        <span className="muted">{draft.model}</span>
+      </p>
+      {draft.suggestion ? (
+        <>
+          <p>
+            제안: {DECISION_LABEL[draft.suggestion.suggested_decision]}
+            {draft.suggestion.suspected_types.length > 0 &&
+              ` · ${draft.suggestion.suspected_types.map((t) => TYPE_LABEL[t] ?? t).join(', ')}`}
+          </p>
+          <ul>
+            {draft.suggestion.key_points.map((k, i) => (
+              <li key={`k${i}`}>{k}</li>
+            ))}
+          </ul>
+          {draft.suggestion.missing_checks.length > 0 && (
+            <p className="muted">추가 확인: {draft.suggestion.missing_checks.join(' · ')}</p>
+          )}
+        </>
+      ) : (
+        <p className="muted">초안 없음: {DRAFT_ERROR_LABEL[draft.error ?? ''] ?? draft.error}</p>
+      )}
+    </div>
+  )
+}
+
 function ReviewPanel({ item, suggested, onDone }: { item: CaseItem; suggested: string[]; onDone: () => void }) {
   const [decision, setDecision] = useState<Decision>('SUSPICIOUS')
   const [types, setTypes] = useState<string[]>(suggested)
@@ -154,6 +209,7 @@ function ReviewPanel({ item, suggested, onDone }: { item: CaseItem; suggested: s
   return (
     <div className="detail-block">
       <h3>판정 확정 (검토자)</h3>
+      <DraftView caseId={item.id} />
       <form onSubmit={onSubmit} className="form">
         <fieldset className="choices">
           <legend>결론</legend>

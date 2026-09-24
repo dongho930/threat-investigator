@@ -45,6 +45,7 @@ CONSOLE_ENDPOINTS = [
     ("GET", f"/api/v1/cases/{CASE_ID}/verdicts", None),
     ("GET", f"/api/v1/cases/{CASE_ID}/reports", None),
     ("GET", f"/api/v1/cases/{CASE_ID}/live", None),
+    ("GET", f"/api/v1/cases/{CASE_ID}/review-draft", None),
     ("POST", "/api/v1/reports/import", None),
     ("GET", "/api/v1/users", None),
     ("GET", "/api/v1/auth/me", None),
@@ -239,3 +240,34 @@ def test_review_body_is_validated(app: FastAPI, as_user: Callable[..., TestClien
     case_id = _create(kim)
     _set_status(app, case_id, CaseStatus.REVIEW)
     assert park.post(f"/api/v1/cases/{case_id}/review", json=body).status_code == 422
+
+
+# --- 자동화 계정(가상 조사자) ---
+
+
+def test_agent_account_cannot_confirm_even_with_reviewer_role(app: FastAPI, as_user: Callable[..., TestClient]) -> None:
+    """CLI가 막지만, DB에 직접 검토자로 만들어져도 서버가 확정을 거부한다(사람만 확정)."""
+    kim = as_user("kim", "investigator")
+    bot = as_user("agent-bot", "reviewer")
+    case_id = _create(kim)
+    _set_status(app, case_id, CaseStatus.REVIEW)
+    r = bot.post(f"/api/v1/cases/{case_id}/review", json={"decision": "BENIGN", "reason": "자동"})
+    assert r.status_code == 403 and r.json()["code"] == "agent_cannot_review"
+
+
+def test_case_shows_creator_for_agent_registrations(as_user: Callable[..., TestClient]) -> None:
+    bot = as_user("agent-inv1", "investigator")
+    park = as_user("park", "reviewer")
+    case_id = _create(bot, "https://agent-made.example.com/")
+    assert park.get(f"/api/v1/cases/{case_id}").json()["creator"] == "agent-inv1"
+
+
+def test_cli_limits_agent_accounts_to_investigator(app: FastAPI) -> None:
+    from app import cli
+    from tests.conftest import PASSWORD
+
+    with app.state.session_factory() as db:
+        for role in ("reviewer", "admin"):
+            with pytest.raises(cli.CliError):
+                cli.create_user(db, "agent-x", role, PASSWORD)
+        assert cli.create_user(db, "agent-x", "investigator", PASSWORD).username == "agent-x"
