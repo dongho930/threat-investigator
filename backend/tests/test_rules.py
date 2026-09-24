@@ -34,11 +34,40 @@ def test_test_pages_are_flagged(name: str, status: str, types: list[str]) -> Non
 
 
 def test_benign_shop_with_login_is_not_suspicious() -> None:
-    """로그인 폼만 있는 정상 쇼핑몰: 오판정(SUSPICIOUS)이 아니라 약한 징후 → 보류(UNKNOWN)."""
+    """로그인 폼만 있는 정상 쇼핑몰: 약한 징후 1개뿐 → 보류하지 않음(rules/2). 근거 신호는 남는다."""
     dom, chain = _load("benign_shop")
     result = evaluate(dom, chain, collected=True)
-    assert result.status == "UNKNOWN" and result.suspected_types == []
+    assert (result.status, result.reason) == ("BENIGN", "minor_signals_only") and result.suspected_types == []
     assert [s.code for s in result.signals] == ["P1_password_field"]
+
+
+def test_two_weak_signals_are_held() -> None:
+    """은행 이름 + 비밀번호 칸(약한 징후 2점): 기준 미달이지만 사람이 먼저 본다(보류)."""
+    dom = {"title": "가온은행 로그인", "text_excerpt": "인터넷뱅킹", "password_inputs": 1, "forms": []}
+    result = evaluate(dom, {}, collected=True)
+    assert (result.status, result.reason) == ("UNKNOWN", "weak_signals_only")
+
+
+def test_refund_notice_is_lure_not_money_demand() -> None:
+    """'환급' 안내만으로는 금전 요구(강한 징후)가 아니다. 수수료 입금을 요구해야 사기다."""
+    notice = {
+        "title": "지방세 환급 안내",
+        "text_excerpt": "환급금은 본인 명의 계좌로만 지급되며, 수수료나 선입금을 요구하지 않습니다.",
+    }
+    assert evaluate(notice, {}, collected=True).status == "BENIGN"
+    scam = {"title": "환급금 조회", "text_excerpt": "환급 수수료 9,900원을 먼저 입금해 주세요."}
+    result = evaluate(scam, {}, collected=True)
+    assert result.status == "SUSPICIOUS" and result.suspected_types == [SCAM]
+
+
+def test_gambling_deposit_is_not_counted_as_scam() -> None:
+    """도박 사이트(충전·환전 안내)의 입금 계좌·텔레그램 안내는 사기 금전 요구로 세지 않는다."""
+    dom = {"title": "슬롯킹", "text_excerpt": "슬롯 무제재 첫충 30%. 입금 계좌는 텔레그램으로 문의. 충전·환전 무제한"}
+    result = evaluate(dom, {}, collected=True)
+    assert result.suspected_types == [GAMBLING]
+    # 메신저 상담은 도박 맥락으로 기록(점수 0), "입금 계좌" 언급은 금전 요구가 아니다
+    assert any(s.code == "G5_S4_messenger_contact" for s in result.signals)
+    assert not any(s.code == "S1_money_demand" for s in result.signals)
 
 
 def test_page_without_signals_is_benign() -> None:
@@ -81,7 +110,7 @@ def test_legit_sports_info_without_charge_exchange_is_not_gambling() -> None:
     """합법 스포츠 정보(베팅 용어만)는 불법 도박 의심으로 올리지 않는다(충전·환전이 강한 징후)."""
     dom = {"title": "오늘의 경기 배당률 안내", "text_excerpt": "스포츠 경기 일정과 배당률 정보를 제공합니다."}
     result = evaluate(dom, {}, collected=True)
-    assert GAMBLING not in result.suspected_types and result.status == "UNKNOWN"
+    assert GAMBLING not in result.suspected_types and result.status in ("UNKNOWN", "BENIGN")
 
 
 def test_page_text_cannot_inject_rule_outcome() -> None:

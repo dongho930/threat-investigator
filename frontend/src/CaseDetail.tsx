@@ -95,6 +95,7 @@ const POLICY_LABEL: Record<string, string> = {
   rule_threshold_met: '강한 징후가 기준 이상',
   weak_signals_only: '약한 징후만 있음',
   no_signals: '규칙에 걸린 징후 없음',
+  minor_signals_only: '약한 징후 1개뿐 (보류 기준 미달, 근거는 아래 표)',
   insufficient_evidence: '수집 실패·증거 부족 (안전으로 보지 않음)',
 }
 

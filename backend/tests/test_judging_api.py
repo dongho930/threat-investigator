@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import select
 
 from app.db.models import AuditLog, Case, Evidence, Verdict
+from app.judging.rules import RULES_VERSION
 from tests.conftest import WORKER_TOKEN
 
 AUTH = {"Authorization": f"Bearer {WORKER_TOKEN}"}
@@ -52,7 +53,7 @@ def test_collected_case_gets_rule_verdict(client: TestClient) -> None:
         ["PHISHING"],
         "system",
     )
-    assert v["rule_result"]["version"] == "rules/1" and v["rule_result"]["job_id"] == job
+    assert v["rule_result"]["version"] == RULES_VERSION and v["rule_result"]["job_id"] == job
     assert {s["code"] for s in v["rule_result"]["signals"]} >= {"P1_password_field", "P2_sensitive_field"}
     # 판정에 쓴 증거의 해시를 함께 남긴다(재현·검증용)
     assert set(v["rule_result"]["evidence"]) == {"dom_summary", "redirect_chain"}
