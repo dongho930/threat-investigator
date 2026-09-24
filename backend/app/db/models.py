@@ -69,6 +69,7 @@ class EvidenceKind(enum.StrEnum):
     DOM_SUMMARY = "dom_summary"
     REDIRECT_CHAIN = "redirect_chain"
     NETWORK_SUMMARY = "network_summary"
+    VIDEO = "video"  # 조사 과정 녹화(WebM). 담당자는 영상만 보고 의심 페이지를 직접 열지 않는다.
 
 
 class DecidedBy(enum.StrEnum):

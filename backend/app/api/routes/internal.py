@@ -10,7 +10,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Header, Response, status
 
-from app.api.deps import DbDep, SettingsDep, StoreDep, read_limited_body, require_worker
+from app.api.deps import DbDep, FrameStoreDep, SettingsDep, StoreDep, read_limited_body, read_live_frame, require_worker
 from app.db.models import EvidenceKind
 from app.judging import service as judging
 from app.schemas.evidence import (
@@ -22,7 +22,7 @@ from app.schemas.evidence import (
     FeedImportRequest,
     FeedImportResponse,
 )
-from app.services import feed, investigation
+from app.services import feed, investigation, live
 
 router = APIRouter(prefix="/internal/v1", tags=["internal"], dependencies=[Depends(require_worker)])
 
@@ -64,6 +64,21 @@ def upload_evidence(
         # 같은 작업의 재업로드: 기존 증거를 돌려준다(새 파일을 만들지 않음).
         response.status_code = status.HTTP_200_OK
     return EvidenceOut.model_validate(evidence)
+
+
+@router.post("/cases/{case_id}/live", status_code=status.HTTP_204_NO_CONTENT)
+def live_frame(
+    case_id: uuid.UUID,
+    db: DbDep,
+    settings: SettingsDep,
+    frames: FrameStoreDep,
+    body: Annotated[bytes, Depends(read_live_frame)],
+    x_job_id: Annotated[uuid.UUID, Header()],
+    content_type: Annotated[str, Header()] = "",
+) -> Response:
+    """조사 중인 브라우저 화면(JPEG) 한 장. 최신 것만 짧게 보관한다(증거 아님)."""
+    live.put_frame(db, frames, settings, case_id=case_id, job_id=x_job_id, data=body, content_type=content_type)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/cases/{case_id}/complete", response_model=CompleteResult)

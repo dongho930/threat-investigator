@@ -17,6 +17,7 @@ PR 리뷰 때 해당 ID를 체크하고, 보안 이슈에는 같은 분류 라�
 | SC-IN-07 | Worker가 올리는 증거 파일 | 종류별 Content-Type·PNG 시그니처·JSON 객체 검사, 크기 제한(스트리밍 중 차단), 수집기 버전 헤더 형식 제한 | `test_invalid_evidence_rejected`, `test_oversized_evidence_rejected` | 2 | ✅ |
 | SC-IN-08 | 신고 CSV 일괄 등록 | 크기(1MB)·행 수(1000) 제한(nginx·서버 이중), UTF-8/CP949만, 필수 열 확인, 행마다 접수번호 형식·신고일시(미래 거부)·메모 길이·URL 정책 검사, 오류는 행 번호·사유 코드만 응답(입력 반사 없음), 접수번호 유니크로 재업로드 멱등 | `backend/tests/test_reports.py` | 3 | ✅ |
 | SC-IN-09 | CSV 수식 삽입 (내보내기) | 신고·수집 값을 CSV로 내보낼 때 `=`·`+`·`-`·`@`로 시작하는 칸을 무력화 (저장은 원문, 화면은 텍스트) | `test_formula_like_values_are_stored_as_text` (저장 측) | 3 | ⬜ |
+| SC-IN-11 | 실시간 조사 화면·조사 녹화 | 담당자는 이미지(JPEG)·영상(WebM)만 받고 의심 페이지를 직접 열지 않음, 형식(매직 바이트)·Content-Type·크기 검사, 실시간 화면은 사건의 현재 작업·조사 중일 때만 받고 최신 1장만 Redis에 20초(증거 아님), 콘솔 조회는 사건 단위 접근 확인, 녹화는 SHA-256 증거로 저장, 화면 전송 실패는 조사에 영향 없음 | `backend/tests/test_live_and_video.py`, `worker/tests/test_collector_browser.py` | 2 | ✅ |
 | SC-IN-10 | 위협정보 피드(외부 목록) 입력 | 공개된 SHA-256 체크섬과 대조해 다르면 그 회차 전체 미등록, 송신 프록시로만 다운로드·리다이렉트 불허·2MB 제한, 한 회 20건·하루 신규 100건 상한, URL마다 등록 정책 검사, 피드 등재는 판정 근거가 아님(격리 조사 증거만 사용), 로그에는 건수만 | `worker/tests/test_feed.py`, `backend/tests/test_feed.py` | 3 | ✅ |
 | SC-IN-05 | URL·페이지 문구의 개행 (로그 삽입) | `safe_log_value`로 제어문자 제거·길이 제한 | `backend/tests/test_logging_and_outbox.py` | 1 | ✅ |
 | SC-IN-06 | 모든 API 입력 | Pydantic 스키마, `extra="forbid"`, 길이·범위 제한 | `backend/tests/test_cases_api.py` | 1 | ✅ |

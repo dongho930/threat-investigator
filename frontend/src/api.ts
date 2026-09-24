@@ -119,7 +119,7 @@ export function createCase(url: string, note: string): Promise<CaseCreateResult>
   })
 }
 
-export type EvidenceKind = 'screenshot' | 'dom_summary' | 'redirect_chain' | 'network_summary'
+export type EvidenceKind = 'screenshot' | 'dom_summary' | 'redirect_chain' | 'network_summary' | 'video'
 
 export interface EvidenceItem {
   id: string
@@ -175,6 +175,14 @@ export function listEvidence(caseId: string): Promise<{ items: EvidenceItem[] }>
 /** 서버가 SHA-256을 다시 대조한 뒤 돌려준 JSON 증거. 무결성 실패 시 ApiError(integrity_mismatch). */
 export function getEvidenceJson<T>(caseId: string, evidenceId: string): Promise<T> {
   return request<T>(evidencePath(caseId, evidenceId))
+}
+
+/** 조사 중인 격리 브라우저의 최신 화면. 아직 없으면 null(204). */
+export async function fetchLiveFrame(caseId: string): Promise<Blob | null> {
+  const res = await fetch(`/api/v1/cases/${encodeURIComponent(caseId)}/live`, { credentials: 'same-origin' })
+  if (res.status === 401) throw new ApiError('unauthenticated', '로그인이 필요합니다.')
+  if (res.status !== 200 || res.headers.get('content-type') !== 'image/jpeg') return null
+  return res.blob()
 }
 
 export function screenshotUrl(caseId: string, evidenceId: string): string {

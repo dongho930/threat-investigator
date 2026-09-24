@@ -2,13 +2,14 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response, status
 
-from app.api.deps import AccessibleCase, DbDep, SettingsDep, require
+from app.api.deps import AccessibleCase, DbDep, FrameStoreDep, SettingsDep, require
 from app.db.models import User, VerdictStatus
 from app.judging import service as judging
 from app.schemas.cases import AssignRequest, CaseCreate, CaseCreateResult, CaseList, CaseOut, ReviewRequest
 from app.schemas.verdicts import VerdictOut
 from app.security.rbac import Permission, can_access_case
 from app.services import cases as case_service
+from app.services import live
 
 router = APIRouter(prefix="/api/v1/cases", tags=["cases"])
 
@@ -46,6 +47,15 @@ def list_cases(
 @router.get("/{case_id}", response_model=CaseOut, dependencies=[Depends(require(Permission.CASE_READ))])
 def get_case(case: AccessibleCase) -> CaseOut:
     return CaseOut.model_validate(case)
+
+
+@router.get("/{case_id}/live", dependencies=[Depends(require(Permission.CASE_READ))])
+def live_frame(case: AccessibleCase, frames: FrameStoreDep) -> Response:
+    """조사 중인 격리 브라우저의 최신 화면(JPEG). 없으면 204. 담당자는 이미지로만 보고 페이지를 열지 않는다."""
+    data = live.get_frame(frames, case.id)
+    if data is None:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return Response(content=data, media_type="image/jpeg")
 
 
 @router.post("/{case_id}/assign", response_model=CaseOut)

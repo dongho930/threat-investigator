@@ -15,6 +15,7 @@ from app.security import rbac
 from app.security.rbac import Permission
 from app.services import auth
 from app.services.evidence_store import LocalEvidenceStore
+from app.services.live import FrameStore, get_frame_store
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +33,7 @@ def get_evidence_store(settings: SettingsDep) -> LocalEvidenceStore:
 
 
 StoreDep = Annotated[LocalEvidenceStore, Depends(get_evidence_store)]
+FrameStoreDep = Annotated[FrameStore, Depends(get_frame_store)]
 
 
 def require_worker(settings: SettingsDep, authorization: Annotated[str | None, Header()] = None) -> None:
@@ -114,7 +116,14 @@ async def _read_body(request: Request, limit: int) -> bytes:
 
 
 async def read_limited_body(request: Request, settings: SettingsDep) -> bytes:
-    return await _read_body(request, max(settings.evidence_max_screenshot_bytes, settings.evidence_max_json_bytes))
+    limit = max(
+        settings.evidence_max_screenshot_bytes, settings.evidence_max_json_bytes, settings.evidence_max_video_bytes
+    )
+    return await _read_body(request, limit)
+
+
+async def read_live_frame(request: Request, settings: SettingsDep) -> bytes:
+    return await _read_body(request, settings.live_frame_max_bytes)
 
 
 async def read_csv_body(request: Request, settings: SettingsDep) -> bytes:

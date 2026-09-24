@@ -44,6 +44,7 @@ CONSOLE_ENDPOINTS = [
     ("GET", f"/api/v1/cases/{CASE_ID}/evidence/{CASE_ID}/content", None),
     ("GET", f"/api/v1/cases/{CASE_ID}/verdicts", None),
     ("GET", f"/api/v1/cases/{CASE_ID}/reports", None),
+    ("GET", f"/api/v1/cases/{CASE_ID}/live", None),
     ("POST", "/api/v1/reports/import", None),
     ("GET", "/api/v1/users", None),
     ("GET", "/api/v1/auth/me", None),
@@ -65,12 +66,16 @@ def test_every_console_route_is_covered_by_the_list(app: FastAPI) -> None:
         (m, p.replace(CASE_ID, "{case_id}", 1).replace(CASE_ID, "{evidence_id}")) for m, p, _ in CONSOLE_ENDPOINTS
     }
     public = {("POST", "/api/v1/auth/login"), ("GET", "/api/health")}
-    for route in app.routes:
-        path = getattr(route, "path", "")
-        if not path.startswith("/api/") or path.startswith("/api/docs") or path == "/api/openapi.json":
+    # FastAPI 0.141부터 app.routes에는 포함된 라우터 묶음만 있어 경로를 직접 볼 수 없다(이 시험이 한동안 아무것도
+    # 검사하지 않았던 원인). 전체 경로는 OpenAPI 스키마에서 읽고, 실제로 검사한 수도 확인한다.
+    checked = set()
+    for path, operations in app.openapi()["paths"].items():
+        if not path.startswith("/api/"):
             continue
-        for method in route.methods - {"HEAD", "OPTIONS"}:
-            assert (method, path) in listed | public, f"인증 시험 목록에 없는 라우트: {method} {path}"
+        for method in operations:
+            checked.add((method.upper(), path))
+            assert (method.upper(), path) in listed | public, f"인증 시험 목록에 없는 라우트: {method.upper()} {path}"
+    assert checked >= listed, f"목록에는 있는데 앱에 없는 라우트: {listed - checked}"
 
 
 # --- 역할별 권한 ---

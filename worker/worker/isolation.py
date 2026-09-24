@@ -21,14 +21,22 @@ from worker.collector import Artifacts, NetworkState
 
 logger = logging.getLogger(__name__)
 
-Collect = Callable[[str], Artifacts]
+Collect = Callable[..., Artifacts]  # (url, live) -> Artifacts
 
 
-def _child(make_collect: Callable[[], Collect], url: str, conn: Any) -> None:
+def _child(make_collect: Callable[[], Collect], url: str, live_target: Any, conn: Any) -> None:
     if hasattr(os, "setpgrp"):
         os.setpgrp()  # 이 프로세스와 여기서 뜨는 브라우저를 한 그룹으로 묶는다
     try:
-        conn.send(("ok", make_collect()(url)))
+        collect = make_collect()
+        live = None
+        if live_target is not None:
+            from worker.config import WorkerSettings
+            from worker.live import make_live_sink
+
+            settings = WorkerSettings()
+            live = make_live_sink(live_target, settings) if settings.live_view else None
+        conn.send(("ok", collect(url, live)))
     except Exception:  # 오류 원문은 부모로 보내지 않는다(로그에만)
         logging.getLogger(__name__).exception("isolated collect failed")
         conn.send(("error", None))
@@ -62,9 +70,9 @@ class IsolatedCollector:
         self.deadline_s = deadline_s
         self.ctx = multiprocessing.get_context(start_method)
 
-    def __call__(self, url: str) -> Artifacts:
+    def __call__(self, url: str, live_target: tuple[str, str] | None = None) -> Artifacts:
         parent, child = self.ctx.Pipe(duplex=False)
-        proc = self.ctx.Process(target=_child, args=(self.make_collect, url, child), daemon=True)
+        proc = self.ctx.Process(target=_child, args=(self.make_collect, url, live_target, child), daemon=True)
         proc.start()
         child.close()
         try:

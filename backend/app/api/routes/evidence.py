@@ -15,7 +15,7 @@ router = APIRouter(
     dependencies=[Depends(require(Permission.CASE_READ))],
 )
 
-MEDIA_TYPES = {EvidenceKind.SCREENSHOT: ("image/png", "png")}
+MEDIA_TYPES = {EvidenceKind.SCREENSHOT: ("image/png", "png"), EvidenceKind.VIDEO: ("video/webm", "webm")}
 DEFAULT_MEDIA = ("application/json", "json")
 
 
