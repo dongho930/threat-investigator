@@ -12,8 +12,10 @@ import uuid
 from dataclasses import dataclass
 from pathlib import Path
 
-_EXTENSIONS = frozenset({"png", "json"})
-_KEY_PATTERN = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}\.(png|json)$")
+_EXTENSIONS = frozenset({"png", "json", "webm"})
+_KEY_PATTERN = re.compile(
+    r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/[0-9a-f]{32}\.(png|json|webm)$"
+)
 
 
 class InvalidStorageKey(ValueError):

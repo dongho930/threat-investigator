@@ -53,13 +53,17 @@ def test_uses_url_from_api_not_message() -> None:
     job = _job()
     api = FakeApi(Target(case_id=job.case_id, url="https://from-db.example.com/"))
     seen: list[str] = []
+    targets: list[object] = []
 
-    def collect(url: str) -> Artifacts:
+    def collect(url: str, live_target: object = None) -> Artifacts:
         seen.append(url)
+        targets.append(live_target)
         return _artifacts()
 
     Investigator(api, collect)(job)
     assert seen == ["https://from-db.example.com/"]
+    # 실시간 화면은 이 사건·작업으로만 보낸다
+    assert targets == [(str(job.case_id), str(job.job_id))]
     # 모든 API 호출에 같은 작업 ID를 붙인다(backend 멱등 처리의 기준)
     assert api.jobs and set(api.jobs) == {job.job_id}
     assert [k for k, _, _ in api.uploads] == ["screenshot", "dom_summary", "redirect_chain", "network_summary"]
@@ -69,7 +73,7 @@ def test_uses_url_from_api_not_message() -> None:
 def test_skips_when_not_claimable() -> None:
     api = FakeApi(None)
 
-    def collect(url: str) -> Artifacts:
+    def collect(url: str, live_target: object = None) -> Artifacts:
         raise AssertionError("must not collect")
 
     Investigator(api, collect)(_job())
@@ -79,8 +83,8 @@ def test_skips_when_not_claimable() -> None:
 def test_failed_collection_still_uploads_partial_evidence() -> None:
     job = _job()
     api = FakeApi(Target(case_id=job.case_id, url="https://x.example.com/"))
-    Investigator(api, lambda url: _artifacts(outcome="failed", reason="blocked_by_policy", dom_summary=None,
-                                             screenshot=None))(job)  # fmt: skip
+    partial = _artifacts(outcome="failed", reason="blocked_by_policy", dom_summary=None, screenshot=None)
+    Investigator(api, lambda url, live_target=None: partial)(job)
     assert [k for k, _, _ in api.uploads] == ["redirect_chain", "network_summary"]
     assert api.completed == [("failed", "blocked_by_policy")]
 
@@ -89,7 +93,7 @@ def test_collector_crash_reports_code_only() -> None:
     job = _job()
     api = FakeApi(Target(case_id=job.case_id, url="https://x.example.com/"))
 
-    def collect(url: str) -> Artifacts:
+    def collect(url: str, live_target: object = None) -> Artifacts:
         raise RuntimeError("chromium crashed with /secret/path")
 
     Investigator(api, collect)(job)
@@ -105,7 +109,7 @@ def test_api_failure_propagates_for_retry() -> None:
 
     api = BrokenApi(Target(case_id=job.case_id, url="https://x.example.com/"))
     with pytest.raises(ConnectionError):
-        Investigator(api, lambda url: _artifacts())(job)
+        Investigator(api, lambda url, live_target=None: _artifacts())(job)
     assert api.completed == []
 
 

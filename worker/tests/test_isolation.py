@@ -15,22 +15,22 @@ from worker.isolation import IsolatedCollector
 OK = Artifacts("collected", None, {"schema": "redirect_chain/1", "hops": [], "final_url": "u"}, {"schema": "n"})
 
 
-def quick(url: str) -> Artifacts:
+def quick(url: str, live: object = None) -> Artifacts:
     return Artifacts(
         "collected", None, {"schema": "redirect_chain/1", "hops": [], "final_url": url}, {"x": 1}, None, b"png"
     )
 
 
-def hang(url: str) -> Artifacts:
+def hang(url: str, live: object = None) -> Artifacts:
     time.sleep(3600)
     raise AssertionError("unreachable")
 
 
-def boom(url: str) -> Artifacts:
+def boom(url: str, live: object = None) -> Artifacts:
     raise ValueError("secret detail /etc/passwd")
 
 
-def hang_with_grandchild(url: str) -> Artifacts:
+def hang_with_grandchild(url: str, live: object = None) -> Artifacts:
     # 브라우저처럼 자식 프로세스를 띄운 채 멈춘다. pid를 파일에 적어 시험이 생존 여부를 본다.
     child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(3600)"])  # noqa: S603
     Path(url).write_text(str(child.pid))

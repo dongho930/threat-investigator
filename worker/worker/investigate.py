@@ -24,7 +24,7 @@ class Api(Protocol):
     def complete(self, case_id: object, job_id: object, outcome: str, reason: str | None = None) -> dict: ...
 
 
-Collect = Callable[[str], Artifacts]
+Collect = Callable[[str, tuple[str, str] | None], Artifacts]
 
 
 class Investigator:
@@ -39,7 +39,8 @@ class Investigator:
             return
 
         try:
-            artifacts = self.collect(target.url)
+            # 실시간 화면은 이 사건·작업으로만 보낸다(backend가 현재 작업인지 다시 확인한다).
+            artifacts = self.collect(target.url, (str(job.case_id), str(job.job_id)))
         except Exception:
             # 수집기 자체 오류는 원문 메시지를 API로 보내지 않고 정해진 사유 코드만 보고한다.
             logger.exception("collector crashed case=%s", job.case_id)

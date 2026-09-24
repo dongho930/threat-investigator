@@ -11,10 +11,14 @@
 - 브라우저·컨텍스트는 with 블록으로 예외가 나도 반드시 닫는다(SC-CE-02).
 """
 
+import base64
 import json
 import logging
+import os
 import re
+import tempfile
 from collections import Counter
+from collections.abc import Callable
 from contextlib import closing
 from dataclasses import dataclass, field
 from typing import Any
@@ -101,6 +105,7 @@ class Artifacts:
     network_summary: dict[str, Any]
     dom_summary: dict[str, Any] | None = None
     screenshot: bytes | None = None
+    video: bytes | None = None
 
     def files(self) -> list[tuple[str, bytes, str]]:
         """(증거 종류, 내용, Content-Type) 목록."""
@@ -111,6 +116,8 @@ class Artifacts:
             out.append(("dom_summary", _json_bytes(self.dom_summary), "application/json"))
         out.append(("redirect_chain", _json_bytes(self.redirect_chain), "application/json"))
         out.append(("network_summary", _json_bytes(self.network_summary), "application/json"))
+        if self.video is not None:
+            out.append(("video", self.video, "video/webm"))
         return out
 
 
@@ -180,8 +187,8 @@ class Collector:
         self.settings = settings
         self.guard = guard
 
-    def __call__(self, url: str) -> Artifacts:
-        with sync_playwright() as p:
+    def __call__(self, url: str, live: Callable[[bytes], None] | None = None) -> Artifacts:
+        with tempfile.TemporaryDirectory(prefix="rec-") as video_dir, sync_playwright() as p:
             launch_opts: dict[str, Any] = {"headless": True, "chromium_sandbox": self.settings.chromium_sandbox}
             if self.settings.egress_proxy_url:
                 # 브라우저·APIRequestContext의 모든 연결을 송신 프록시로 보낸다.
@@ -189,17 +196,66 @@ class Collector:
                 launch_opts["proxy"] = {"server": self.settings.egress_proxy_url, "bypass": "<-loopback>"}
             with closing(p.chromium.launch(**launch_opts)) as browser:
                 width, height = self.settings.viewport
+                context_opts: dict[str, Any] = {}
+                if self.settings.record_video:
+                    vw, vh = self.settings.video_size
+                    context_opts = {"record_video_dir": video_dir, "record_video_size": {"width": vw, "height": vh}}
                 context = browser.new_context(
                     accept_downloads=False,
                     service_workers="block",
                     viewport={"width": width, "height": height},
                     locale="ko-KR",
                     java_script_enabled=True,
+                    **context_opts,
                 )
+                pages: list[Page] = []
                 with closing(context):
-                    return self._investigate(context, url)
+                    artifacts = self._investigate(context, url, live, pages)
+                # 녹화 파일은 컨텍스트를 닫아야 완성된다.
+                artifacts.video = self._read_video(pages)
+                return artifacts
 
-    def _investigate(self, context: BrowserContext, url: str) -> Artifacts:
+    def _read_video(self, pages: list[Page]) -> bytes | None:
+        if not self.settings.record_video or not pages or pages[0].video is None:
+            return None
+        try:
+            path = pages[0].video.path()
+            if os.path.getsize(path) > self.settings.video_max_bytes:
+                logger.warning("recording too large, dropped")
+                return None
+            with open(path, "rb") as fh:
+                return fh.read()
+        except (PlaywrightError, OSError):
+            logger.warning("recording unavailable")
+            return None
+
+    @staticmethod
+    def _start_live(context: BrowserContext, page: Page, live: Callable[[bytes], None]) -> None:
+        """Chromium 화면 전송(CDP screencast)으로 JPEG를 받아 넘긴다. 실패해도 조사는 계속한다."""
+        try:
+            cdp = context.new_cdp_session(page)
+        except PlaywrightError:
+            logger.warning("live view unavailable (cdp)")
+            return
+
+        def on_frame(event: dict[str, Any]) -> None:
+            try:
+                cdp.send("Page.screencastFrameAck", {"sessionId": event["sessionId"]})
+                if page.url in ("", "about:blank"):
+                    return  # 대상 페이지를 열기 전의 빈 화면은 보내지 않는다
+                live(base64.b64decode(event["data"]))
+            except Exception:  # 화면 전송 실패는 조사에 영향을 주지 않는다
+                logger.debug("live frame dropped", exc_info=True)
+
+        cdp.on("Page.screencastFrame", on_frame)
+        try:
+            cdp.send("Page.startScreencast", {"format": "jpeg", "quality": 50, "maxWidth": 800, "maxHeight": 500})
+        except PlaywrightError:
+            logger.warning("live view unavailable (screencast)")
+
+    def _investigate(
+        self, context: BrowserContext, url: str, live: Callable[[bytes], None] | None, pages: list[Page]
+    ) -> Artifacts:
         cfg = self.settings
         guard = CachingGuard(self.guard)
         net = NetworkState()
@@ -213,6 +269,9 @@ class Collector:
         final_url = hops[-1].url
         context.route("**/*", lambda route: self._on_route(route, guard, net))
         page = context.new_page()
+        pages.append(page)
+        if live is not None:
+            self._start_live(context, page, live)
         net.main_frame = page.main_frame
         page.set_default_timeout(cfg.navigation_timeout_ms)
         context.on("page", lambda popup: self._close_popup(popup, page, net))

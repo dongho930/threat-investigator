@@ -31,6 +31,10 @@ class Settings(BaseSettings):
     evidence_dir: str = "/data/evidence"
     evidence_max_screenshot_bytes: int = 8 * 1024 * 1024
     evidence_max_json_bytes: int = 1024 * 1024
+    evidence_max_video_bytes: int = 16 * 1024 * 1024
+    # 실시간 조사 화면: Worker가 보낸 최신 JPEG 한 장만 Redis에 짧게 둔다(증거가 아님, 저장하지 않음).
+    live_frame_max_bytes: int = 256 * 1024
+    live_frame_ttl_seconds: int = 20
     evidence_retention_days: int = 90
 
     # 신고 CSV 일괄 등록 제한

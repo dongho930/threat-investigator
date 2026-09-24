@@ -84,6 +84,10 @@ class ApiClient:
         body = json.dumps({"source": source, "urls": urls}).encode()
         return self._request("POST", "/internal/v1/feed/import", body, "application/json")
 
+    def post_live_frame(self, case_id: uuid.UUID, job_id: uuid.UUID, frame: bytes) -> None:
+        """조사 중인 화면 한 장(JPEG). backend는 최신 한 장만 짧게 보관한다."""
+        self._request("POST", f"/internal/v1/cases/{case_id}/live", frame, "image/jpeg", job_id)
+
     def complete(self, case_id: uuid.UUID, job_id: uuid.UUID, outcome: str, reason: str | None = None) -> dict:
         body = json.dumps({"job_id": str(job_id), "outcome": outcome, "reason": reason}).encode()
         return self._request("POST", f"/internal/v1/cases/{case_id}/complete", body, "application/json")

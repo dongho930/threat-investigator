@@ -137,3 +137,20 @@ def test_download_not_saved(site: str, collect: Collector) -> None:
     a = collect(f"{site}/download")
     assert a.outcome == "failed"
     assert a.reason in ("navigation_error", "collector_error")
+
+
+def test_records_video_and_streams_live_jpeg_frames(site: str, collect: Collector) -> None:
+    frames: list[bytes] = []
+    a = collect(f"{site}/phish", frames.append)
+    # 녹화는 WebM(EBML 헤더)으로 증거에 들어가고, 실시간 화면은 JPEG 이미지로만 전달된다.
+    assert a.video is not None and a.video.startswith(b"\x1a\x45\xdf\xa3")
+    assert ("video", a.video, "video/webm") in a.files()
+    assert frames and all(f.startswith(b"\xff\xd8\xff") for f in frames)
+
+
+def test_live_sink_errors_do_not_break_collection(site: str, collect: Collector) -> None:
+    def broken(frame: bytes) -> None:
+        raise ConnectionError("backend down")
+
+    a = collect(f"{site}/phish", broken)
+    assert a.outcome == "collected" and a.screenshot is not None

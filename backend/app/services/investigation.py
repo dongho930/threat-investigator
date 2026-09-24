@@ -28,6 +28,7 @@ from app.services.evidence_store import LocalEvidenceStore
 logger = logging.getLogger(__name__)
 
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+WEBM_SIGNATURE = b"\x1a\x45\xdf\xa3"  # EBML 헤더(WebM·Matroska)
 
 
 class Outcome(StrEnum):
@@ -123,6 +124,15 @@ def _validate_content(kind: EvidenceKind, data: bytes, content_type: str, settin
         if not data.startswith(PNG_SIGNATURE):
             raise InvestigationError("invalid_content", "PNG 형식이 아닙니다.", 422)
         return "png"
+
+    if kind is EvidenceKind.VIDEO:
+        if media_type != "video/webm":
+            raise InvestigationError("unsupported_media_type", "녹화는 WebM만 받습니다.", 415)
+        if len(data) > settings.evidence_max_video_bytes:
+            raise InvestigationError("too_large", "증거 파일이 너무 큽니다.", 413)
+        if not data.startswith(WEBM_SIGNATURE):
+            raise InvestigationError("invalid_content", "WebM 형식이 아닙니다.", 422)
+        return "webm"
 
     if media_type != "application/json":
         raise InvestigationError("unsupported_media_type", "JSON만 받습니다.", 415)

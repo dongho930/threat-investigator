@@ -1,5 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 
+import LiveView from './LiveView'
+
 import {
   ApiError,
   assignCase,
@@ -40,6 +42,7 @@ const KIND_LABEL: Record<string, string> = {
   dom_summary: '페이지 요약',
   redirect_chain: '이동 경로',
   network_summary: '네트워크 요약',
+  video: '조사 녹화',
 }
 
 interface Loaded {
@@ -350,6 +353,8 @@ export default function CaseDetail({ item, me, onChanged }: { item: CaseItem; me
 
   const current = data?.caseId === item.id ? data : null
   const shot = current ? latest(current.evidence, 'screenshot') : undefined
+  const video = current ? latest(current.evidence, 'video') : undefined
+  const investigating = item.status === 'queued' || item.status === 'investigating'
   // 판정 이력은 최신 버전이 먼저 온다. 시스템 판정과 검토자 판정을 따로 보여 준다.
   const systemVerdict = current?.verdicts.find((v) => v.decided_by === 'system')
   const humanVerdict = current?.verdicts.find((v) => v.decided_by === 'human')
@@ -399,6 +404,17 @@ export default function CaseDetail({ item, me, onChanged }: { item: CaseItem; me
         </div>
       )}
       {current && current.evidence.length === 0 && <p className="muted">아직 수집된 증거가 없습니다.</p>}
+
+      {investigating && <LiveView caseId={item.id} />}
+
+      {video && (
+        <div className="detail-block">
+          <h3>조사 녹화</h3>
+          {/* 격리 브라우저 화면을 녹화한 영상이다. 파일은 서버가 SHA-256으로 검증해 돌려준다. */}
+          <video className="screenshot" controls preload="metadata" src={screenshotUrl(item.id, video.id)} />
+          <p className="muted">리다이렉트·지연 렌더링·팝업 차단 등 조사 과정 전체 (SHA-256 {video.sha256.slice(0, 12)}…)</p>
+        </div>
+      )}
 
       {shot && (
         <div className="detail-block">
