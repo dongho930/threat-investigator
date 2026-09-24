@@ -27,7 +27,7 @@ from app.db.models import (
     Verdict,
     VerdictStatus,
 )
-from app.judging import rules
+from app.judging import injection, rules
 from app.services.cases import CaseError
 from app.services.evidence_store import LocalEvidenceStore
 
@@ -77,6 +77,8 @@ def rule_result_dict(ev: JobEvidence, job_id: uuid.UUID, *, collected: bool) -> 
     rule_result = result.as_dict()
     rule_result["job_id"] = str(job_id)
     rule_result["evidence"] = ev.hashes
+    # AI 조작 시도 문구 탐지 결과(기록만, 규칙 판정 상태는 바꾸지 않는다). AI를 꺼도 담당자가 볼 수 있게 남긴다.
+    rule_result["injection"] = injection.detect(ev.dom)
     return result, rule_result
 
 

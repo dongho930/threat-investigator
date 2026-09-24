@@ -1,0 +1,139 @@
+{
+ "results": [
+  {
+   "id": "D2-01",
+   "name": "SSRF: 클라우드 메타데이터로 리다이렉트",
+   "blocked": true,
+   "status": "failed",
+   "reason": "blocked_by_policy",
+   "notes": []
+  },
+  {
+   "id": "D2-02",
+   "name": "SSRF: 루프백(127.0.0.1)으로 리다이렉트",
+   "blocked": true,
+   "status": "failed",
+   "reason": "blocked_by_policy",
+   "notes": []
+  },
+  {
+   "id": "D2-03",
+   "name": "SSRF: 사설 IP(10.0.0.1)로 리다이렉트",
+   "blocked": true,
+   "status": "failed",
+   "reason": "blocked_by_policy",
+   "notes": []
+  },
+  {
+   "id": "D2-04",
+   "name": "SSRF: 내부 서비스 이름(backend)으로 리다이렉트",
+   "blocked": true,
+   "status": "failed",
+   "reason": "blocked_by_policy",
+   "notes": []
+  },
+  {
+   "id": "D2-05",
+   "name": "DNS: 공개 이름이 루프백 주소로 풀림(localtest.me)",
+   "blocked": true,
+   "status": "failed",
+   "reason": "blocked_by_policy",
+   "notes": []
+  },
+  {
+   "id": "D2-06",
+   "name": "DNS 리바인딩: 조회마다 127.0.0.1/10.0.0.1로 바뀌는 이름",
+   "blocked": true,
+   "status": "failed",
+   "reason": "blocked_by_policy",
+   "notes": []
+  },
+  {
+   "id": "D2-07",
+   "name": "무한 리다이렉트",
+   "blocked": true,
+   "status": "failed",
+   "reason": "too_many_redirects",
+   "notes": []
+  },
+  {
+   "id": "D2-08",
+   "name": "14단계 리다이렉트(한도 10 초과)",
+   "blocked": true,
+   "status": "failed",
+   "reason": "too_many_redirects",
+   "notes": []
+  },
+  {
+   "id": "D2-09",
+   "name": "하위 자원(이미지) 리다이렉트로 메타데이터 유도",
+   "blocked": true,
+   "status": "review",
+   "reason": null,
+   "notes": [
+    "하위 자원 차단 1건"
+   ]
+  },
+  {
+   "id": "D2-10",
+   "name": "팝업(새 창 2개, 하나는 메타데이터)",
+   "blocked": true,
+   "status": "review",
+   "reason": null,
+   "notes": [
+    "팝업 2개 닫음"
+   ]
+  },
+  {
+   "id": "D2-11",
+   "name": "실행 파일 자동 다운로드",
+   "blocked": true,
+   "status": "review",
+   "reason": null,
+   "notes": [
+    "증거 ['dom_summary', 'network_summary', 'redirect_chain', 'screenshot']"
+   ]
+  },
+  {
+   "id": "D2-12",
+   "name": "Service Worker 등록 시도",
+   "blocked": true,
+   "status": "review",
+   "reason": null,
+   "notes": [
+    "SW:unavailable"
+   ]
+  },
+  {
+   "id": "D2-13",
+   "name": "프롬프트 인젝션(가짜 SYSTEM 지시로 정상 판정 유도)",
+   "blocked": true,
+   "status": "review",
+   "reason": null,
+   "notes": [
+    "판정 SUSPICIOUS · 탐지 ['role_marker', 'ignore_instructions', 'verdict_override']"
+   ]
+  },
+  {
+   "id": "D2-14",
+   "name": "저장형 XSS(제목·본문·입력 이름·placeholder·javascript: 링크)",
+   "blocked": true,
+   "status": "review",
+   "reason": null,
+   "notes": [
+    "콘솔 표시 중 스크립트 실행 0건"
+   ]
+  },
+  {
+   "id": "D2-15",
+   "name": "대용량 문서(약 40MB 글자·2만 개 입력칸)",
+   "blocked": false,
+   "status": "queued",
+   "reason": null,
+   "notes": [
+    "status=queued"
+   ]
+  }
+ ],
+ "worker_alive": false
+}

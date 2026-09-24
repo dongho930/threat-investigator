@@ -1,0 +1,678 @@
+{
+ "rows": [
+  {
+   "id": "pa81801f2ca",
+   "label": "phishing",
+   "family": "P-A",
+   "variant": "static",
+   "case_id": "dcc3fb5b-0773-436d-9db4-c1c330faf436",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "PHISHING"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p7032c7e815",
+   "label": "phishing",
+   "family": "P-A",
+   "variant": "delayed",
+   "case_id": "cd5d317e-5dec-439b-8ffe-4d909a77b825",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "PHISHING"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p16e3d0e957",
+   "label": "phishing",
+   "family": "P-A",
+   "variant": "redirect",
+   "case_id": "a4df6b4c-0681-4288-af4d-342be81279eb",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "PHISHING"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p0142e34ba2",
+   "label": "phishing",
+   "family": "P-A",
+   "variant": "jsnav",
+   "case_id": "a9e7bf94-6544-463a-9d4a-61ffb8ed6a77",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "PHISHING"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p3cce9948cf",
+   "label": "phishing",
+   "family": "P-C",
+   "variant": "static",
+   "case_id": "7a1eb8b0-06df-46d1-bfd3-605542ad0e19",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "PHISHING"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pee2a3dfc1d",
+   "label": "phishing",
+   "family": "P-C",
+   "variant": "delayed",
+   "case_id": "5a8b8575-4299-4e55-a2b6-7430566276a3",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "PHISHING"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pf2168b705c",
+   "label": "phishing",
+   "family": "P-C",
+   "variant": "redirect",
+   "case_id": "25ec61f6-f0ee-425a-b5b6-1991467b806b",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "PHISHING"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pfacf645cfa",
+   "label": "phishing",
+   "family": "P-E",
+   "variant": "static",
+   "case_id": "627d1c44-150e-488d-8920-e6d2a1b6325a",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "PHISHING"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pc3357ca35d",
+   "label": "phishing",
+   "family": "P-E",
+   "variant": "delayed",
+   "case_id": "6774c650-91f5-4395-b419-0f94bbfefe35",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "PHISHING"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pa4f1e20702",
+   "label": "phishing",
+   "family": "P-E",
+   "variant": "redirect",
+   "case_id": "e4aed7ea-a042-4003-b051-97110a19d13b",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "PHISHING"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p62b949461a",
+   "label": "scam",
+   "family": "S-A",
+   "variant": "static",
+   "case_id": "d4e160ca-e8ef-4893-9749-c7333e7fc5a0",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "SCAM"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p467a0f5769",
+   "label": "scam",
+   "family": "S-A",
+   "variant": "delayed",
+   "case_id": "798a70c2-4c6f-461d-b38f-567335ce878e",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "SCAM"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p7422326b98",
+   "label": "scam",
+   "family": "S-A",
+   "variant": "redirect",
+   "case_id": "224a51b7-bbc0-495e-9c95-f67fb5780500",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "SCAM"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pb08ce2d027",
+   "label": "scam",
+   "family": "S-A",
+   "variant": "jsnav",
+   "case_id": "b139265b-92a3-4bbb-82dc-21078d005e78",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "SCAM"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pe747ab86f1",
+   "label": "scam",
+   "family": "S-C",
+   "variant": "static",
+   "case_id": "56fa26c7-17e7-4c6e-bd58-be98f5719691",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "SCAM"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p8d3b422381",
+   "label": "scam",
+   "family": "S-C",
+   "variant": "delayed",
+   "case_id": "230ac2a9-115f-4ea8-8f35-b76f17e12142",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "SCAM"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p58f8a70456",
+   "label": "scam",
+   "family": "S-C",
+   "variant": "redirect",
+   "case_id": "b236e6de-206c-414b-aff4-260a89ccc6e9",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "SCAM"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p602aec4e2f",
+   "label": "scam",
+   "family": "S-E",
+   "variant": "static",
+   "case_id": "866dba65-129a-4b9f-8869-e9ee1b5f1432",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "SCAM"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p471d990871",
+   "label": "scam",
+   "family": "S-E",
+   "variant": "delayed",
+   "case_id": "b82304b6-4108-448f-b3d8-8de2c32b1ccd",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "SCAM"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p3aca58f12c",
+   "label": "scam",
+   "family": "S-E",
+   "variant": "redirect",
+   "case_id": "76d74b98-ad3c-4322-82e3-ea187a720479",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "SCAM"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p7ad7c73d34",
+   "label": "gambling",
+   "family": "G-A",
+   "variant": "static",
+   "case_id": "3328581f-cf72-4db6-a192-68a59294723a",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "ILLEGAL_GAMBLING_SUSPECTED"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pd8a307d21e",
+   "label": "gambling",
+   "family": "G-A",
+   "variant": "delayed",
+   "case_id": "e17e8f56-3a56-40bf-931c-e10117c6cd0f",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "ILLEGAL_GAMBLING_SUSPECTED"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p0d810f25aa",
+   "label": "gambling",
+   "family": "G-A",
+   "variant": "redirect",
+   "case_id": "5a8140b5-5a35-41f6-bce8-cd74b07098ec",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "ILLEGAL_GAMBLING_SUSPECTED"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p1014c37ed1",
+   "label": "gambling",
+   "family": "G-A",
+   "variant": "jsnav",
+   "case_id": "30e6c37f-6972-4630-8607-09a3ad639fde",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "ILLEGAL_GAMBLING_SUSPECTED"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p65751bee2f",
+   "label": "gambling",
+   "family": "G-C",
+   "variant": "static",
+   "case_id": "820ef21d-c207-47bc-968b-b111554b2158",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "ILLEGAL_GAMBLING_SUSPECTED",
+    "SCAM"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p937966d968",
+   "label": "gambling",
+   "family": "G-C",
+   "variant": "delayed",
+   "case_id": "aee19b4f-1731-42b8-b535-8568257da6b0",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "ILLEGAL_GAMBLING_SUSPECTED",
+    "SCAM"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p1ab60d1728",
+   "label": "gambling",
+   "family": "G-C",
+   "variant": "redirect",
+   "case_id": "b17ee9ba-40cc-4c2a-b338-ce6333a00f71",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "ILLEGAL_GAMBLING_SUSPECTED",
+    "SCAM"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p0bf0d53bf9",
+   "label": "gambling",
+   "family": "G-E",
+   "variant": "static",
+   "case_id": "4953684b-5f97-4476-a3e4-286faa591bb5",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "ILLEGAL_GAMBLING_SUSPECTED"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p093d287d20",
+   "label": "gambling",
+   "family": "G-E",
+   "variant": "delayed",
+   "case_id": "27f8c48b-4e38-431a-9765-cb3e0c702304",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "ILLEGAL_GAMBLING_SUSPECTED"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p4e78e70e3e",
+   "label": "gambling",
+   "family": "G-E",
+   "variant": "redirect",
+   "case_id": "244df74c-1a5b-487c-8099-5540a52d05a7",
+   "case_status": "review",
+   "status": "SUSPICIOUS",
+   "suspected_types": [
+    "ILLEGAL_GAMBLING_SUSPECTED"
+   ],
+   "reason": "rule_threshold_met",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p644fbc1c86",
+   "label": "normal",
+   "family": "N-A",
+   "variant": "static",
+   "case_id": "827725e0-f853-4234-a17d-7b4a46338bda",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pb5fbebb014",
+   "label": "normal",
+   "family": "N-A",
+   "variant": "delayed",
+   "case_id": "316eac06-7a8e-4899-98a9-3c4f5300d8fe",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p95edfcdd7d",
+   "label": "normal",
+   "family": "N-A",
+   "variant": "redirect",
+   "case_id": "11012f4a-7796-4d80-856d-265d3e367218",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p5310253138",
+   "label": "normal",
+   "family": "N-C",
+   "variant": "static",
+   "case_id": "2aa97107-f4a5-4027-a3b7-d7a464ec1ab0",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p642435bc9e",
+   "label": "normal",
+   "family": "N-C",
+   "variant": "delayed",
+   "case_id": "ffa4f225-9548-40e4-8d63-cf2ee659361e",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pc759b9d06b",
+   "label": "normal",
+   "family": "N-C",
+   "variant": "redirect",
+   "case_id": "3b438ee3-b34c-4332-834a-f54433e3cd3f",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p2c1bf413ff",
+   "label": "normal",
+   "family": "N-E",
+   "variant": "static",
+   "case_id": "a2c1bdc6-8477-498d-89a8-4f514cb5b7c3",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p803a5041bd",
+   "label": "normal",
+   "family": "N-E",
+   "variant": "delayed",
+   "case_id": "fa2321d2-2c7f-4da7-8e6f-9b868d8fc317",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p982d1f36bc",
+   "label": "normal",
+   "family": "N-E",
+   "variant": "redirect",
+   "case_id": "b3d3481c-06db-4bc4-a95b-07a19d244c0a",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pbfd5f653fc",
+   "label": "normal",
+   "family": "N-G",
+   "variant": "static",
+   "case_id": "40dacf9d-61fe-423e-bf82-9b45d20fa30f",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pc0a70b3d8a",
+   "label": "normal",
+   "family": "N-G",
+   "variant": "delayed",
+   "case_id": "92bd685b-cb5a-4ac2-adcc-b86af7377c6a",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p4c17259c96",
+   "label": "normal",
+   "family": "N-G",
+   "variant": "redirect",
+   "case_id": "df1253ff-4a5a-4b12-b5be-ecde4047112b",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "p4d4b025d0b",
+   "label": "normal",
+   "family": "N-I",
+   "variant": "static",
+   "case_id": "636e921e-83b3-4e77-9e2f-4c89ea164e38",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pb1cb3c4ced",
+   "label": "normal",
+   "family": "N-I",
+   "variant": "delayed",
+   "case_id": "60583bca-9952-4bb6-9f54-5691e12198a0",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  },
+  {
+   "id": "pa1702bfda3",
+   "label": "normal",
+   "family": "N-I",
+   "variant": "redirect",
+   "case_id": "55cdf0a2-8a6c-449d-b29f-46d1e53e231f",
+   "case_status": "review",
+   "status": "UNKNOWN",
+   "suspected_types": [],
+   "reason": "weak_signals_only",
+   "model": null,
+   "final_path_ok": true
+  }
+ ],
+ "metrics": {
+  "phishing": {
+   "recall": "10/10 (100.0%, 95% CI 72.2~100.0%)",
+   "precision": "10/10 (100.0%, 95% CI 72.2~100.0%)",
+   "held": "0/10 (0.0%, 95% CI 0.0~27.8%)"
+  },
+  "scam": {
+   "recall": "10/10 (100.0%, 95% CI 72.2~100.0%)",
+   "precision": "10/13 (76.9%, 95% CI 49.7~91.8%)",
+   "held": "0/10 (0.0%, 95% CI 0.0~27.8%)"
+  },
+  "gambling": {
+   "recall": "10/10 (100.0%, 95% CI 72.2~100.0%)",
+   "precision": "10/10 (100.0%, 95% CI 72.2~100.0%)",
+   "held": "0/10 (0.0%, 95% CI 0.0~27.8%)"
+  },
+  "normal": {
+   "false_suspicious": "0/15 (0.0%, 95% CI 0.0~20.4%)",
+   "held": "15/15 (100.0%, 95% CI 79.6~100.0%)",
+   "benign": "0/15 (0.0%, 95% CI 0.0~20.4%)"
+  },
+  "dynamic_capture": "12/12 (100.0%, 95% CI 75.8~100.0%)",
+  "final_destination": "17/17 (100.0%, 95% CI 81.6~100.0%)",
+  "held_overall": "15/45 (33.3%, 95% CI 21.4~47.9%)",
+  "failed": 0
+ }
+}

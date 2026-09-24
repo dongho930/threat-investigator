@@ -31,6 +31,7 @@ const REASON_LABEL: Record<string, string> = {
   navigation_timeout: '페이지 응답 시간 초과',
   navigation_error: '페이지 접속 실패',
   collector_error: '수집기 오류',
+  collection_timeout: '수집 시간 제한 초과 (브라우저를 강제로 종료함)',
   retry_exhausted: '재시도 한도 초과 (조사 작업이 반복해서 끝나지 않음)',
 }
 

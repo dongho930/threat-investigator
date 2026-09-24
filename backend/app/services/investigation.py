@@ -43,6 +43,7 @@ class FailureReason(StrEnum):
     NAVIGATION_TIMEOUT = "navigation_timeout"
     NAVIGATION_ERROR = "navigation_error"
     COLLECTOR_ERROR = "collector_error"
+    COLLECTION_TIMEOUT = "collection_timeout"  # 수집 전체 시간 제한 초과(브라우저 강제 종료)
 
 
 class SystemReason(StrEnum):
