@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><title>&lt;svg onload=alert(1)&gt; 회원 확인</title></head>
+<body>
+<h1>회원 확인 <img src=x onerror="alert('xss-h1')"></h1>
+<p>"&gt;&lt;script&gt;alert('xss-text')&lt;/script&gt; 아래 정보를 입력하세요.</p>
+<form onsubmit="return false">
+  <input name="&quot;&gt;&lt;img src=x onerror=alert('xss-name')&gt;" placeholder="&lt;script&gt;alert('xss-ph')&lt;/script&gt;">
+  <input name="password" type="password">
+</form>
+<a href="javascript:alert('xss-link')">javascript: 링크</a>
+</body></html>

@@ -1,0 +1,7 @@
+# 평가 도구용. backend와 같은 규칙에, 페이지 문구(한국어 긴 문자열)와 시험 데이터 생성용 난수만 예외로 둔다.
+extend = "../backend/pyproject.toml"
+
+[lint.per-file-ignores]
+"d1_families.py" = ["E501"]
+"generate.py" = ["S311"]   # 시험 페이지 금액·기한용 난수(보안 용도 아님)
+"run.py" = ["S603", "S607"] # git 명령 고정 인자

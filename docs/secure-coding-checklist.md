@@ -58,6 +58,7 @@ PR 리뷰 때 해당 ID를 체크하고, 보안 이슈에는 같은 분류 라�
 | ID | 위험 지점 | 대책 | 시험 | 주차 | 상태 |
 |---|---|---|---|---|---|
 | SC-CE-01 | 작업 메시지 역직렬화 | JSON + Pydantic만 허용, pickle 금지, 크기 제한, 불량 메시지는 dead-letter | `worker/tests/test_consumer.py` | 1 | ✅ |
+| SC-CE-03 | 수집 자원 고갈(서비스 거부) | 수집 1건을 별도 프로세스 그룹에서 실행하고 전체 시간 제한(60초)을 넘으면 브라우저까지 그룹째 SIGKILL, `collection_timeout`으로 보고 후 다음 작업 진행. 수집기는 자식 프로세스가 직접 만듦(부모 객체를 넘기지 않음) | `worker/tests/test_isolation.py`(손자 프로세스까지 종료 확인), D2-15 대용량 문서 | 2 | ✅ |
 | SC-CE-02 | 브라우저·파일 자원 누수 | Playwright·브라우저·컨텍스트를 `with`/`closing`으로 해제, 증거 파일은 임시 파일 후 rename, DB 실패 시 파일 삭제 | `worker/tests/test_collector_browser.py` | 2 | ✅ |
 
 ## 6. 캡슐화 (SC-EN)

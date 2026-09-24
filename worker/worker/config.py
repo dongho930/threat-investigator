@@ -29,6 +29,8 @@ class WorkerSettings:
     max_forms: int = 20
     max_hosts: int = 50
     viewport: tuple[int, int] = (1280, 800)
+    # 수집 1건 전체 시간 제한. 넘으면 브라우저를 포함한 프로세스 그룹을 강제 종료한다(worker/isolation.py).
+    collection_deadline_s: float = field(default_factory=lambda: float(os.getenv("COLLECTION_DEADLINE_S", "60")))
 
     # 송신 프록시. 설정하면 브라우저의 모든 요청과 목적지 검사가 이 프록시를 거친다(컨테이너 배포에서는 필수).
     egress_proxy_url: str | None = field(default_factory=lambda: os.getenv("EGRESS_PROXY_URL") or None)
