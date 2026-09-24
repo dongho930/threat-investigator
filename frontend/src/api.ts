@@ -18,6 +18,8 @@ export interface CaseItem {
   status_reason: string | null
   note: string | null
   assignee: string | null
+  /** 등록한 사용자. agent-로 시작하면 자동화 계정(가상 조사자). 피드·시스템 등록은 null */
+  creator: string | null
   created_at: string
 }
 
@@ -279,6 +281,25 @@ export function assignCase(caseId: string, assigneeId: string): Promise<CaseItem
 }
 
 export type Decision = VerdictItem['status']
+
+export interface ReviewDraft {
+  model: string
+  suggestion: {
+    suggested_decision: Decision
+    suspected_types: string[]
+    key_points: string[]
+    missing_checks: string[]
+  } | null
+  error: string | null
+  created_at: string
+}
+
+/** AI 검토 보조 초안(검토자·관리자만, 참고용). 없으면 null(204). */
+export async function fetchReviewDraft(caseId: string): Promise<ReviewDraft | null> {
+  const res = await fetch(`/api/v1/cases/${encodeURIComponent(caseId)}/review-draft`, { credentials: 'same-origin' })
+  if (res.status !== 200) return null
+  return (await res.json()) as ReviewDraft
+}
 
 export function reviewCase(
   caseId: string,

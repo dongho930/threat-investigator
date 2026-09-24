@@ -256,3 +256,15 @@ h3 {
   background: #ffebe9;
   color: #82071e;
 }
+
+.draft {
+  border: 1px dashed #d0d7de;
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.draft ul {
+  margin: 0.25rem 0 0.5rem 1.25rem;
+  padding: 0;
+}

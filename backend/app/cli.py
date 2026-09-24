@@ -17,7 +17,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.db.models import AuditLog, User, UserRole
+from app.db.models import AGENT_PREFIX, AuditLog, User, UserRole
 from app.db.session import get_sessionmaker
 from app.security import passwords
 from app.services.auth import normalize_username, revoke_user_sessions
@@ -54,6 +54,8 @@ def create_user(db: Session, username: str, role: str, password: str) -> User:
     name = normalize_username(username)
     if not USERNAME.match(name):
         raise CliError("아이디는 영문 소문자·숫자·._- 3~32자여야 합니다.")
+    if name.startswith(AGENT_PREFIX) and role != UserRole.INVESTIGATOR.value:
+        raise CliError("agent- 계정(자동화)은 조사자 역할만 가질 수 있습니다. 판정 확정은 사람만 합니다.")
     user = User(username=name, password_hash=passwords.hash_password(password), role=UserRole(role))
     db.add(user)
     try:

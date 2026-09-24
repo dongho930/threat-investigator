@@ -17,6 +17,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.models import (
+    AGENT_PREFIX,
     AuditLog,
     Case,
     CaseStatus,
@@ -151,6 +152,8 @@ def review_case(
         raise CaseError("not_found", "사건을 찾을 수 없습니다.", 404)
     if locked.status not in REVIEWABLE:
         raise CaseError("not_reviewable", "검토 필요·보류 상태의 사건만 판정을 확정할 수 있습니다.", 409)
+    if reviewer.username.startswith(AGENT_PREFIX):
+        raise CaseError("agent_cannot_review", "자동화 계정은 판정을 확정할 수 없습니다(사람만 확정).", 403)
     if locked.created_by == reviewer.id:
         raise CaseError("self_review", "자기가 등록한 사건은 다른 검토자가 확정해야 합니다.", 403)
 

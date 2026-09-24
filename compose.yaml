@@ -9,6 +9,7 @@
 #   sandbox: worker ↔ egress-proxy (internal)  ← Worker는 인터넷에 직접 닿지 않는다
 #   egress : egress-proxy ↔ 조사 대상(testsites, 인터넷). 프록시가 연결마다 목적지 IP를 검사한다.
 #   ai     : ai-judge ↔ 모델 서버(laya·llm) (internal)  ← 모델 서버는 인터넷·DB·다른 서비스에 닿지 않는다
+#   review-egress: ai-reviewer ↔ egress-proxy (internal)  ← AI 검토 보조는 송신 프록시로만 Anthropic API에 나간다
 #
 # AI 판정(선택): .env에 AI_MODEL=laya 또는 qwen을 두고 같은 이름의 프로필로 띄운다.
 #   docker compose --profile qwen up -d --build     (모델은 한 번에 하나만: 이 PC의 Docker 메모리 3.7GB 기준)
@@ -136,6 +137,28 @@ services:
     networks: [data, ai]
     profiles: ["laya", "qwen"]
 
+  ai-reviewer:
+    # AI 검토 보조(기본 꺼짐). .env에 AI_REVIEW_ENABLED=true와 ANTHROPIC_API_KEY를 넣고
+    #   docker compose --profile ai-review up -d
+    # 검토 필요 사건의 판정 초안만 남긴다(판정·상태 변경 없음, 확정은 사람). 하루 호출 상한 AI_REVIEW_MAX_PER_DAY.
+    build: ./backend
+    <<: *hardening
+    command: ["python", "-m", "app.judging.ai_review"]
+    environment:
+      <<: *backend-env
+      EVIDENCE_DIR: /data/evidence
+      AI_REVIEW_ENABLED: ${AI_REVIEW_ENABLED:-false}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      AI_REVIEW_MAX_PER_DAY: ${AI_REVIEW_MAX_PER_DAY:-50}
+      HTTPS_PROXY: http://egress-proxy:3128
+    read_only: true
+    tmpfs: ["/tmp"]
+    volumes: ["evidence:/data/evidence:ro"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+    networks: [data, review-egress]
+    profiles: ["ai-review"]
+
   laya:
     # Laya multilingual(322M, Apache-2.0). 가중치는 이미지에 고정 리비전·해시 검증으로 들어 있다.
     build: ./ai/laya
@@ -188,8 +211,8 @@ services:
     environment:
       # 개발용 시험 페이지만 사설 주소여도 허용한다. 운영에서는 비워 둔다.
       EGRESS_HOST_ALLOWLIST: '["testsites"]'
-    # 포트를 공개하지 않는다. sandbox 네트워크의 Worker만 접근한다.
-    networks: [sandbox, egress]
+    # 포트를 공개하지 않는다. sandbox(Worker)·review-egress(AI 검토 보조)에서만 접근한다.
+    networks: [sandbox, egress, review-egress]
 
   frontend:
     build: ./frontend
@@ -220,6 +243,7 @@ networks:
   sandbox: { internal: true }
   egress: {}
   ai: { internal: true }
+  review-egress: { internal: true }
 
 volumes:
   pgdata: {}

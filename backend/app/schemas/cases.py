@@ -27,6 +27,8 @@ class CaseOut(BaseModel):
     status_reason: str | None = None
     note: str | None
     assignee: str | None = Field(default=None, validation_alias="assignee_username")
+    # 등록한 사용자. 피드·시스템 등록은 null. agent-로 시작하면 자동화 계정(가상 조사자)이다.
+    creator: str | None = Field(default=None, validation_alias="creator_username")
     created_at: datetime
 
 

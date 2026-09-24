@@ -83,6 +83,11 @@ npm run dev
 증거로 남는다. 담당자 브라우저는 이미지·영상만 받으며 의심 페이지를 직접 열지 않는다.
 끄려면 worker 환경변수 `LIVE_VIEW=false`, `RECORD_VIDEO=false`.
 
+## 가상 조사자 · AI 검토 보조
+
+- **가상 조사자** (`agents/virtual_investigator.py`): `agent-` 계정이 D1 개발용 페이지로 신고 CSV를 만들어 올리고 처리 결과를 모은다. 시연·부하 시험용이며 판정 확정은 할 수 없다(사람만 확정). 결과는 자동화 시험으로만 보고한다.
+- **AI 검토 보조** (`ai-reviewer`, 기본 꺼짐): 검토 필요 사건마다 Claude(`claude-opus-5`)가 판정 초안(제안 결론·확인 사항)을 남기고, 검토자가 판정 확정 화면에서 참고한다. 초안은 판정·상태를 바꾸지 않는다. 켜려면 `.env`에 `AI_REVIEW_ENABLED=true`, `ANTHROPIC_API_KEY`를 넣고 `docker compose --profile ai-review up -d`. 켜면 의심 페이지 요약이 Anthropic으로 나가므로(송신 프록시 경유) 결과보고서에 외부 AI 사용을 적는다.
+
 ## AI 판정 (선택)
 
 규칙 판정(기준선) 뒤에 로컬 모델 판단을 더할 수 있다. 기본값은 **규칙만**(`AI_MODEL=none`)이다.

@@ -1,12 +1,13 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Response, status
+from sqlalchemy import select
 
 from app.api.deps import AccessibleCase, DbDep, FrameStoreDep, SettingsDep, require
-from app.db.models import User, VerdictStatus
+from app.db.models import ReviewDraft, User, VerdictStatus
 from app.judging import service as judging
 from app.schemas.cases import AssignRequest, CaseCreate, CaseCreateResult, CaseList, CaseOut, ReviewRequest
-from app.schemas.verdicts import VerdictOut
+from app.schemas.verdicts import ReviewDraftOut, VerdictOut
 from app.security.rbac import Permission, can_access_case
 from app.services import cases as case_service
 from app.services import live
@@ -56,6 +57,22 @@ def live_frame(case: AccessibleCase, frames: FrameStoreDep) -> Response:
     if data is None:
         return Response(status_code=status.HTTP_204_NO_CONTENT)
     return Response(content=data, media_type="image/jpeg")
+
+
+@router.get(
+    "/{case_id}/review-draft",
+    response_model=ReviewDraftOut,
+    dependencies=[Depends(require(Permission.CASE_REVIEW))],
+    responses={204: {"description": "초안 없음"}},
+)
+def review_draft(case: AccessibleCase, db: DbDep) -> ReviewDraftOut | Response:
+    """AI 검토 보조가 남긴 최신 초안(검토자·관리자만). 참고용이며 판정·상태를 바꾸지 않는다."""
+    draft = db.scalar(
+        select(ReviewDraft).where(ReviewDraft.case_id == case.id).order_by(ReviewDraft.created_at.desc()).limit(1)
+    )
+    if draft is None:
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+    return ReviewDraftOut.model_validate(draft)
 
 
 @router.post("/{case_id}/assign", response_model=CaseOut)
